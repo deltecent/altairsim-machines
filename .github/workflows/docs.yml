@@ -1,0 +1,149 @@
+name: README PDFs and machine zips
+
+# EVERY README.md HAS A README.pdf BESIDE IT, AND EVERY MACHINE DIRECTORY HAS A <dir>/<dir>.zip OF
+# ITS FILES. THIS JOB KEEPS BOTH TRUE.
+#
+# Building a PDF needs pandoc and a browser, and nobody remembers to run
+# tools/readme-pdf/build.sh. So on any push to master that touches a README, rebuild the PDFs and
+# commit the ones whose text actually changed. Ported from deltecent/altairsim's docs.yml.
+#
+# Why a Linux runner can be trusted with this: the fonts are embedded in the page
+# (tools/readme-pdf/fonts/README.md), and build.sh fails if any face in the finished PDF is one we
+# did not ship. With pandoc pinned to the version used locally, this runner and a Mac produce the
+# same pages. Chrome is the one thing not pinned, so a Chrome update on the runner image can reflow
+# a document and produce a real commit that no human wrote. Noisy, but honest.
+
+on:
+  # Any change can change a zip (a zip holds every file in its directory), so the filter is on what
+  # this job writes, not on what it reads: the PDFs and zips it commits must not re-trigger it.
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - '**/README.pdf'
+      - '**/*.zip'
+  # On a PR from this repository the job also commits to the PR branch, so the regenerated PDFs
+  # and zips are on the branch BEFORE it merges and can be pulled and tested (see the open-pr
+  # skill). A push made with GITHUB_TOKEN does not start another run, so this cannot loop. A PR
+  # from a fork cannot be pushed to: it is built, not committed.
+  pull_request:
+    paths-ignore:
+      - '**/README.pdf'
+      - '**/*.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Two pushes to master in quick succession must not both try to commit a PDF.
+concurrency:
+  group: readme-pdf
+  cancel-in-progress: false
+
+jobs:
+  pdfs:
+    name: Rebuild the README PDFs and machine zips
+    runs-on: ubuntu-latest
+    steps:
+      # DEPTH 1: this job builds no binary, and the only thing it stamps is
+      # `git rev-parse --short HEAD`. On a PR, check out the BRANCH (not the merge commit), so
+      # that the commit below lands on it.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+
+      # PINNED to what the humans have: pandoc's HTML is the paginator's input, so a different
+      # pandoc is a different document. Ubuntu's apt pandoc is older than the 3.6 used locally.
+      - name: Install pandoc 3.6
+        timeout-minutes: 8
+        run: |
+          curl -fsSL --retry 3 --retry-connrefused --max-time 180 -o /tmp/pandoc.deb \
+            https://github.com/jgm/pandoc/releases/download/3.6/pandoc-3.6-1-amd64.deb
+          sudo dpkg -i /tmp/pandoc.deb
+          pandoc --version | head -1
+
+      # pdftotext (to tell news from noise) and pdffonts (build.sh's check that no font from THIS
+      # machine leaked into the PDF). Skippable locally, never skipped here.
+      - name: Install poppler-utils
+        timeout-minutes: 12
+        run: bash tools/ci-apt-install.sh poppler-utils
+
+      # The runner image ships Google Chrome; build.sh finds it by name. Do not "fix" a missing
+      # Chrome with `apt-get install chromium`: on Ubuntu that is a snap shim that does not run
+      # headless in CI.
+      - name: Check for the PDF engine
+        run: |
+          command -v google-chrome || { echo "No google-chrome on the runner image."; exit 1; }
+          google-chrome --version
+          command -v python3 || { echo "No python3 on the runner image."; exit 1; }
+          python3 --version
+
+      # WHAT THE PDFs SAID BEFORE, so the step after the build can ask the only question worth
+      # asking -- did the CONTENT move? -- rather than "is the file different", which it always is.
+      - name: Remember what the PDFs said
+        run: |
+          # Every PDF is named README.pdf, so key by the sanitized path (sol20_README.pdf).
+          # Other PDFs (manuals under sol20/, sdsys/) are not ours and are never touched.
+          mkdir -p /tmp/before
+          for pdf in README.pdf */README.pdf; do
+            [ -e "$pdf" ] || continue
+            key=$(echo "$pdf" | tr '/' '_')
+            pdftotext "$pdf" - > "/tmp/before/$key.txt" || true
+          done
+
+      - name: Rebuild
+        run: tools/readme-pdf/build.sh
+
+      # NEWS OR NOISE. These PDFs can never be compared as bytes: build.sh stamps every build with
+      # "<date> · <short hash>" and Chrome adds its own /CreationDate. Committing on "the file
+      # changed" would add every PDF to the history on every push. So compare the extracted TEXT
+      # with the stamp line removed, and put back any document whose text did not move.
+      - name: Commit the ones that actually changed
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          stamp='^[0-9]{4}-[0-9]{2}-[0-9]{2} · [0-9a-f?]{1,}$'
+
+          for pdf in README.pdf */README.pdf; do
+            [ -e "$pdf" ] || continue
+            key=$(echo "$pdf" | tr '/' '_')
+            before="/tmp/before/$key.txt"
+
+            grep -vE "$stamp" "$before" > "/tmp/$key.old" 2>/dev/null || true
+            pdftotext "$pdf" - | grep -vE "$stamp" > "/tmp/$key.new" || true
+
+            # A PDF that is new to the repo has no "before" and must always be committed.
+            if [ -e "$before" ] && cmp -s "/tmp/$key.old" "/tmp/$key.new"; then
+              echo "unchanged: $pdf (this rebuild differs only by its stamp)"
+              git checkout -- "$pdf"
+            else
+              echo "CHANGED:   $pdf"
+            fi
+          done
+
+          # THE ZIPS. Built AFTER the loop above, so a README.pdf that was put back is zipped as
+          # it is committed. tools/build-zips.py is reproducible -- same files, same bytes -- so
+          # rebuilding every zip changes only the ones whose directory changed.
+          python3 tools/build-zips.py
+
+          # NOT `git diff --quiet`: a first-build README.pdf or zip is UNTRACKED and git diff does
+          # not see it. `git status --porcelain` reports it, so this fires for new and changed alike.
+          if [ -z "$(git status --porcelain -- README.pdf '*/README.pdf' '*/*.zip')" ]; then
+            echo "Nothing to commit -- the PDFs and zips already match the files."
+            exit 0
+          fi
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.pdf */README.pdf */*.zip
+          git commit -m "Rebuild the README PDFs and machine zips for ${GITHUB_SHA:0:7}" \
+                     -m "Rebuilt by .github/workflows/docs.yml. Only the PDFs whose extracted text
+          actually moved are here, and only the zips whose directory changed; a rebuild that
+          differed solely by its date/hash stamp was discarded."
+          git push origin HEAD:${{ github.head_ref || 'master' }}
+
+      # A fork's PR cannot be pushed to, so say what happens instead.
+      - name: Note for a pull request from a fork
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "README PDFs and machine zips build cleanly."
+          echo "This PR is from a fork, so they are not committed to it. The job on master"
+          echo "rebuilds and commits them once the PR merges."
