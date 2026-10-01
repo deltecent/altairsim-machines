@@ -1,0 +1,60 @@
+# Cromemco Dazzler graphics from MBASIC, under CP/M 2.2, on an Altair.
+#
+#     cd examples/dazzler && altairsim dzmbasic.toml
+#
+# It boots straight to A> off the 8" floppy beside this file. Type DZMBASIC: Microsoft BASIC
+# with a DZOP statement and a DZF function that draw on the Dazzler -- dots, lines, filled
+# rectangles and text, with the cursor, color, page flip and palette cycle. On a build with
+# SDL3 a window opens the first time a program touches the Dazzler. DZMBASIC-Manual.pdf, beside
+# this file, describes every DZOP action. In a headless build the program runs the same and
+# draws nothing.
+#
+# THE PATHS ARE RELATIVE TO THIS FILE, so the folder boots wherever it is copied to.
+#
+# THE MACHINE is the built-in `default` Altair (front panel, 88-2SIO console at 10, 88-DCDD at
+# 08, 56K of RAM, the DBL boot PROM at FF00) with two changes:
+#
+#   - cpu0  is a Z80. DZMBASIC's graphics library uses Z80 instructions. On an 8080 the first
+#           DZOP "I" runs into an opcode the 8080 does not have and the machine warm-boots
+#           back to A>. MBASIC itself runs on either.
+#   - daz0  is a Dazzler at ports 0E/0F, the Cromemco defaults. It decodes no memory: its
+#           picture is read out of ordinary RAM.
+#
+# THE DISK holds CP/M 2.2 (MITS, 56K) and DZMBASIC.COM. Drive 0 is read/write: there is no
+# undo, so copy the image first if you mean to SAVE programs onto it.
+
+[machine]
+name    = "dzmbasic"
+base    = "default"
+startup = ["RUN FF00"]        # EXAMINE FF00 / RUN on a real disk Altair: the DBL boot PROM
+
+# THE BACKSPACE KEY. A modern terminal sends DEL (7F); CP/M's line editor wants BS (08).
+[console]
+bsdel = "bs"
+
+# THE TERMINAL KEEPS THE KEYBOARD FOCUS when the window opens: the window does not jump to the
+# front. Type at the terminal and the picture draws in the window beside it. Keys typed in the
+# window still go to the console (`keyboard = "console"`).
+[display]
+focus    = false
+keyboard = "console"
+
+# THE PROCESSOR, a Z80, replacing the base's 8080. `type` with the base's id swaps the board.
+[[board]]
+type = "z80"
+id   = "cpu0"
+
+# THE DISK, in drive 0 of the base's own 88-DCDD (`id` with no `type` means the board already
+# in the machine).
+[[board]]
+id = "dsk0"
+
+  [[board.drive]]
+  unit  = 0
+  mount = "DZMBASIC.DSK"
+
+# THE DAZZLER. Control/status at 0EH, format at 0FH. It needs a Display.
+[[board]]
+type = "dazzler"
+id   = "daz0"
+port = 0x0E
