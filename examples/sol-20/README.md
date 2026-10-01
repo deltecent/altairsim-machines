@@ -10,6 +10,16 @@ altairsim pacman.toml        # PAC-MAN
 altairsim raiders.toml       # RAIDERS
 ```
 
+A fifth file, `trek80-ent.toml`, loads TREK80 without the cassette. It pastes `TREK80.ENT`, a
+SOLOS `ENTER` script, at the keyboard and then starts the game with `EX 0000`:
+
+```
+altairsim trek80-ent.toml    # TREK80, from TREK80.ENT
+```
+
+More Sol-20 programs are at
+<https://deramp.com/downloads/processor_technology/sol-20/software/>.
+
 **The game loads itself.** Each file mounts the cassette, types the SOLOS command that runs it, and
 boots — so after the tape finishes loading (about the minute a real cassette took, at the Sol's own
 speed) the game comes up. TREK80 asks for a speed factor and starts; the others run straight away.
@@ -24,7 +34,7 @@ prompt, as if the keys had been pressed. The names, for when you `XE` one yourse
 | TREK80 | `XE TRK80` |
 | ATC | `XE ATC` |
 | PAC-MAN | `XE PACMA` — SOLOS names are five characters |
-| RAIDERS | `GE RAID`, then `EX 100` — see below |
+| RAIDERS | `XE RAID` with `raiders.toml`; on a bare SOLOS, `GE RAID` then `EX 100` — see below |
 
 **RAIDERS needs two commands, because its tape names the wrong start address.** A SOLOS tape
 header carries a load address and an execute address, and `XE` jumps to the execute address when
@@ -81,11 +91,12 @@ XE TRK80
 
 | File | What it is |
 |---|---|
-| `trek80.toml` · `atc.toml` · `pacman.toml` · `raiders.toml` | The four machines: `base = "sol20"`, a tape, the launch keystrokes, and the clock. `raiders.toml` also deposits the jump at address 0. |
+| `trek80.toml` · `atc.toml` · `pacman.toml` · `raiders.toml` | Four machines: `base = "sol20"`, a tape, the launch keystrokes, and the clock. `raiders.toml` also deposits the jump at address 0. |
 | `TRK80.WAV` · `ATC.WAV` · `PACMAN.WAV` · `RAIDERS.WAV` | **The tapes.** Sol-20 cassettes digitized by Philip Lord (hosted on deramp.com) — real CUTS audio at 1200 baud, decoded the way the hardware did. |
 | `TRK80.TAP` | TREK80 as a byte stream, decoded from `TRK80.WAV`. `MOUNT sol0:tape1 "TRK80.TAP"` skips the audio and loads the same game. |
 | `Trek80 Manual.pdf` · `ATC Manual.pdf` | The game manuals — commands, displays, and scoring — from Processor Technology and Creative Computing. |
-| `TREK80.ENT` | A SOLOS `ENTER` script from the archive. The source for the tape-writing demonstration below. |
+| `trek80-ent.toml` | The fifth machine. `PASTE` types `TREK80.ENT` at the keyboard, so SOLOS loads the game from text and not from a tape. |
+| `TREK80.ENT` | A SOLOS `ENTER` script from the archive. `trek80-ent.toml` pastes it, and it is the source for the tape-writing demonstration below. |
 | `make-trek80-tape.sh` | A demonstration: it has SOLOS write its own tape from `TREK80.ENT`. |
 
 **The tapes are Philip Lord's real recordings, and reading them is the point.** Each `.WAV` decodes

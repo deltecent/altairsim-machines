@@ -1,0 +1,49 @@
+# TREK80 on a Processor Technology Sol-20 -- loaded from TREK80.ENT, not from the cassette.
+#
+#     cd examples/sol-20 && altairsim trek80-ent.toml
+#
+# trek80.toml plays the tape. This file gets the same game into memory the other way a
+# 1977 owner could: TREK80.ENT is a SOLOS `ENTER` script -- `ENTER 0000`, then an address,
+# a colon and sixteen hex bytes on every line, and a `/` to finish. It is text you could type
+# at the SOLOS prompt. Nobody types 7,840 bytes, so PASTE types the file for you.
+#
+# THE PATHS BELOW ARE RELATIVE TO THIS FILE, so this whole directory can be copied anywhere
+# and still run.
+
+[machine]
+name = "trek80-ent"
+base = "sol20"
+
+# `startup` runs monitor commands in order:
+#   1. PASTE sends TREK80.ENT to the keyboard, as if you pasted it. SOLOS reads it at its
+#      first prompt. The file is read as SOLOS takes the characters, so none is lost.
+#   2. TYPE queues `EX 0000` and a carriage return behind the file. SOLOS reads it when the
+#      script has ended, and starts the game at 0000. The backslash DOUBLES in a TOML (`\\r`).
+#   3. SET vdm0 cursor=steady stops the reverse-video cells from flashing (see trek80.toml).
+#   4. RUN C000 cold-starts SOLOS.
+#
+# You see the script go up the screen as SOLOS reads it. ^E stops the machine, and NOPASTE
+# then drops the part of the file that SOLOS has not read.
+startup = [
+  "PASTE \"TREK80.ENT\"",
+  "TYPE \"EX 0000\\r\"",
+  "SET vdm0 cursor=steady",
+  "RUN C000",
+]
+
+# 2.045 MHz -- THE STOCK SOL-20, as in trek80.toml. The game was played at this speed.
+#
+# SOLOS also reads the script at this speed, and that takes about 25 seconds. To load in less
+# than a second, delete this table (the default is flat out), and when the game asks for its
+# speed factor press ^E and type:
+#
+#     SET cpu0 clock_hz=2045000
+#     RUN
+[[board]]
+id       = "cpu0"
+clock_hz = 2045000
+
+# THE PERIOD LOOK, as in trek80.toml. `SET DISPLAY crt=off` gives the sharp look back.
+[display]
+focus = on
+crt = true

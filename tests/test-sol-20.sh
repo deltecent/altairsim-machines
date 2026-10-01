@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Four machines. sol-20/trek80.toml, atc.toml, pacman.toml and raiders.toml each mount a 1977
-# cassette, type `XE <name>` at SOLOS and start it.
+# Five machines. sol-20/trek80.toml, atc.toml, pacman.toml and raiders.toml each mount a 1977
+# cassette, type `XE <name>` at SOLOS and start it. trek80-ent.toml pastes TREK80.ENT instead.
 #
 # The Sol-20's screen is the VDM-1's RAM at 0CC00H, so nothing a game draws reaches the terminal.
 # sol-20.exp stops the machine with ATTN, reads the screen with DUMP and looks for a line only the
@@ -31,6 +31,9 @@ check "cd sol-20 && altairsim trek80.toml"   "$dir" trek80.toml   "ENTER SPEED F
 check "cd sol-20 && altairsim atc.toml"      "$dir" atc.toml      "David Mannering"
 check "cd sol-20 && altairsim pacman.toml"   "$dir" pacman.toml   "PRESS SPACE BAR TO START"
 check "cd sol-20 && altairsim raiders.toml"  "$dir" raiders.toml  'Press "S" anytime to start playing'
+
+# The same game from TREK80.ENT, a SOLOS ENTER script that PASTE types at the keyboard.
+check "cd sol-20 && altairsim trek80-ent.toml" "$dir" trek80-ent.toml "ENTER SPEED FACTOR (9(SLOW)-0(FAST))"
 
 # By path from somewhere else: the tape is not in the working directory.
 check "altairsim sol-20/trek80.toml from the parent" "$work/stage" sol-20/trek80.toml "ENTER SPEED FACTOR (9(SLOW)-0(FAST))"
