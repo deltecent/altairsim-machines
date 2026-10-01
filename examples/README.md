@@ -48,6 +48,6 @@ These machines need the [altairsim](https://github.com/deltecent/altairsim) simu
 
 | | What it is |
 |---|---|
-| [`dazzler/`](dazzler/) | Li-Chen Wang's **Kaleidoscope** on a **Cromemco Dazzler** — a four-way-mirrored, 64×64, 16-color pattern that wanders and recolors forever. |
+| [`dazzler/`](dazzler/) | A **Cromemco Dazzler**, 64×64 in 16 colors: Li-Chen Wang's **Kaleidoscope**, a pattern that wanders and recolors forever, and **DZMBASIC**, Microsoft BASIC with `DZOP` graphics commands, under CP/M. |
 | [`cadzilla/`](cadzilla/) | The **CADzilla** graphics board's HD63484 ACRTC: `DRAWDEMO` shows every drawing command, one screen each, under CP/M. |
 | [`sol20/`](sol20/) | A Processor Technology **Sol-20** with 1977 cassette games: TREK80, ATC, PAC-MAN and RAIDERS, each loading itself from its tape. |
