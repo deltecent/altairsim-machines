@@ -1,0 +1,63 @@
+#!/usr/bin/expect -f
+# Start a Sol-20 machine and wait for its game to reach the VDM-1 screen.
+#
+# usage: expect -f sol-20.exp <altairsim> <machine.toml> <text> [seconds]
+#
+# The Sol-20's screen is memory at 0CC00H, so nothing the game prints reaches the terminal. The
+# machine file auto-launches, so this polls: ATTN (^E) stops the machine, DUMP reads the whole
+# screen, and RUN sends it on. It stops when <text> is in the dump. -i keeps a monitor for ATTN to
+# return to. The dump's first token, "CFC0  " (two spaces), cannot be forged by the echoed
+# command, so the test waits for it and then reads up to the next prompt.
+set exe  [lindex $argv 0]
+set toml [lindex $argv 1]
+set want [lindex $argv 2]
+set secs [expr {[llength $argv] > 3 ? [lindex $argv 3] : 60}]
+set timeout 30
+log_user 0
+
+spawn $exe $toml -i
+expect {
+    -ex "console -- " {}
+    eof     { puts "FAIL: $toml: the machine did not start"; exit 1 }
+    timeout { puts "FAIL: $toml: never reached the guest console"; exit 1 }
+}
+
+set end [expr {[clock seconds] + $secs}]
+set found 0
+set screen ""
+while {!$found && [clock seconds] < $end} {
+    sleep 3
+    send "\005"
+    expect {
+        -ex "altairsim> " {}
+        eof     { puts "FAIL: $toml: the machine died while loading"; exit 1 }
+        timeout { puts "FAIL: $toml: ATTN did not return to the monitor"; exit 1 }
+    }
+    send "DUMP CC00-CFFF WIDTH=64\r"
+    expect {
+        -re {CFC0  .*altairsim> } { set screen $expect_out(buffer) }
+        eof     { puts "FAIL: $toml: the machine died at the monitor"; exit 1 }
+        timeout { puts "FAIL: $toml: DUMP did not answer"; exit 1 }
+    }
+    if {[string first $want $screen] >= 0} {
+        set found 1
+    } else {
+        send "RUN\r"
+        expect {
+            -ex "console -- " {}
+            eof     { puts "FAIL: $toml: the machine would not resume"; exit 1 }
+            timeout { puts "FAIL: $toml: RUN did not resume the machine"; exit 1 }
+        }
+    }
+}
+
+if {!$found} {
+    puts "FAIL: $toml: '$want' never reached the VDM-1 screen in $secs s"
+    puts "--- last screen ---"
+    puts $screen
+    exit 1
+}
+send "QUIT\r"
+expect eof
+puts "OK: $toml: '$want' is on the screen"
+exit 0
