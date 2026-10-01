@@ -26,8 +26,10 @@ and the tests pass against the unzipped result.
    with a plain message that says what changed and why.
 3. **Push and open the PR.** `git push -u origin <branch>`, then `gh pr create --base master`.
    Say in the description what changed and which machines it touches.
-4. **Wait for CI.** `gh pr checks --watch`. The job is "Rebuild the README PDFs and machine zips".
-   If it fails, read the log (`gh run view --log-failed`). The usual cause is a character the PDF
+4. **Watch CI automatically.** Do not stop after opening the PR or ask whether to watch: go straight
+   on to this step and keep going through steps 5-7 without being told. Run `gh pr checks --watch`. The job is "Rebuild the README PDFs and machine zips".
+   Right after the push it may say "no checks"; wait a few seconds and retry, or use
+   `gh run list --branch <branch>` and `gh run watch <id>`. If it fails, read the log (`gh run view --log-failed`). The usual cause is a character the PDF
    fonts do not have; fix the Markdown and push again.
 5. **Pull what CI committed.** When CI finishes, it has pushed a commit named "Rebuild the README
    PDFs and machine zips for ..." to the branch. Run `git pull --ff-only`. If that fails because you
