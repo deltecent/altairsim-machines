@@ -1,6 +1,6 @@
 ---
 name: readme-pdf
-description: Render README.md (the index) and each machine directory's README.md to a sibling README.pdf, the way the altairsim repository does it. Use after editing any README.md, after adding or changing a machine directory, or when asked to build, rebuild or check the README PDFs.
+description: Render README.md, examples/README.md (the index of machines) and each machine directory's README.md to a sibling README.pdf, the way the altairsim repository does it. Use after editing any README.md, after adding or changing a machine directory, or when asked to build, rebuild or check the README PDFs.
 ---
 
 # README.md → README.pdf
@@ -14,7 +14,7 @@ edit the Markdown, never the PDF.**
 ```sh
 tools/readme-pdf/build.sh              # every README.pdf in the repository
 tools/readme-pdf/build.sh fdcplus      # one directory under examples/
-tools/readme-pdf/build.sh . acr uio    # the top-level README, then two directories
+tools/readme-pdf/build.sh . examples acr   # the top-level README, the examples index, one machine
 ```
 
 It needs `pandoc`, a Chromium-based browser (Chrome, Chromium or Edge), `python3`, and — for the
@@ -48,11 +48,11 @@ A failed check leaves the old PDF in place. Fix the cause; do not copy the temp 
 
 ## When to run it
 
-- After any README edit: rebuild that directory, then the top-level one if its table row changed.
+- After any README edit: rebuild that directory, then `examples/README.md` if its table row changed.
 - Commit the `.md` and the `.pdf` together. A PDF whose text does not match its Markdown is a bug.
 - Comparing PDFs as bytes is useless: the subtitle stamp and Chrome's `/CreationDate` differ every
   build. To ask whether the content moved, compare `pdftotext` output with the stamp line removed.
 - Every machine directory needs a README.md; a directory without one gets no PDF. The build-all
-  run covers the top-level README and `examples/*/README.md`; other directories are not machines.
+  run covers the top-level README, `examples/README.md` and `examples/*/README.md`; other directories are not machines.
 - Machine files and README text must agree: launch commands name the `.toml` in that directory,
   run from inside it.
