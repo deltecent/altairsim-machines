@@ -6,8 +6,9 @@ them anywhere and it still runs — a path inside a machine file resolves agains
 against the directory you launched from.
 
 Each directory has its own `README.md` (also distributed as `README.pdf`) saying what the machine
-is and what to type, and a `<dir>.zip` of everything in it. Launch one by naming its machine file
-from inside its directory:
+is and what to type. Each directory also holds a `<dir>.zip` containing all of its files, so you can
+download that one file instead of the files one by one. You do not need both. Launch a machine by
+naming its machine file from inside its directory:
 
 ```
 cd examples/acr
