@@ -1,49 +1,25 @@
 # altairsim machines
 
-**Machines that boot.** Each directory under `examples/` is self-contained: a `.toml` that describes the
-machine, the media it needs lying beside it, and a note saying what you will see. Copy any one of
-them anywhere and it still runs — a path inside a machine file resolves against **that file**, not
-against the directory you launched from.
+Example machines for [**altairsim**](https://github.com/deltecent/altairsim), a simulator of the
+MITS Altair 8800 and the S-100 boards and computers around it. Every machine here is written for
+that simulator and runs on it; install altairsim first, and `altairsim` must be on your `PATH`.
 
-Each directory under `examples/` has its own `README.md` (also distributed as `README.pdf`) saying what the machine
-is and what to type. Launch one by naming its machine file from inside its directory:
+Each machine is a directory under [`examples/`](examples/) holding a `.toml` machine file, the disk,
+tape or ROM images it boots, and a README that says what you will see. Copy a directory anywhere
+and it still runs. [`examples/README.md`](examples/README.md) lists every machine and what it is.
 
 ```
-cd examples/acr
-altairsim mitstapes.toml
+cd examples/hdsk
+altairsim hdsk.toml
 ```
 
-## Disk systems
+## What is here
 
-| | What it is |
+| | |
 |---|---|
-| [`diskbasic/`](examples/diskbasic/) | **Altair Disk Extended BASIC 4.1** (MITS, 1977) on an 8" floppy behind an 88-DCDD, booted by the DBL PROM. Unlike the cassette BASIC, this one has a filesystem — `SAVE` by name, a directory, `DSKINI`. `MEMORY SIZE?` |
-| [`hdsk/`](examples/hdsk/) | **CP/M 2.2** booting off an Altair **88-HDSK "Datakeeper"** hard disk — an outboard controller moving whole sectors over an 88-4PIO — loaded by the HDBL PROM. `A0>` |
-| [`fdcplus/`](examples/fdcplus/) | **CP/M 2.2b** on an **FDC+**: from a serial drive server (`fdcplus-type7.toml`) or on the FDC+'s 1.5 MB floppy (`fdcplus-type5.toml`). |
-| [`turnkey/`](examples/turnkey/) | The **MITS 8800bt**, an Altair with a Turnkey Module and no front panel, booting CP/M two ways: off an 88-DCDD floppy (`floppy.toml`) or an 88-HDSK hard disk (`hdsk.toml`). |
-| [`tarbell/`](examples/tarbell/) | **CP/M 2.2** that boots itself off a **Tarbell** floppy controller and its own 32-byte boot PROM: single density (`tarbell.toml`, `tarbell` #1011) and double density, with and without DMA (`tarbelldd.toml`, `tarbelldd-dma.toml`). |
-| [`icom/`](examples/icom/) | **CP/M and FDOS** on an **iCOM FD3712/FD3812** 8″ floppy — single and double density CP/M, and both revisions of iCOM's FDOS. |
-| [`cdos/`](examples/cdos/) | **CDOS 2.58**, Cromemco's CP/M work-alike, booted from an 8″ diskette through a **Cromemco 16FDC** on a 4 MHz Z80. |
-| [`sdsys/`](examples/sdsys/) | The **SD Systems SBC-200**, a Z80 single-board computer with the SD/MS monitor, booting SDOS, CP/M 2.2, and banked and non-banked CP/M 3 — with a serial or a video console. |
-| [`dualide/`](examples/dualide/) | **CP/M 3** off a CompactFlash card on the IDE half of the S100Computers **IDE-AB CF+ESP32** board. |
-| [`dualsd/`](examples/dualsd/) | **CP/M 3** off microSD cards on the S100Computers **Dual SD** board, booted from the V2 Z80 board's MASTER monitor. |
-| [`dualidesd/`](examples/dualidesd/) | The whole **IDE-AB CF + Dual SD** combination board: all four drives, `A:`/`B:` on CF and `C:`/`D:` on SD, under CP/M 3. |
+| [`examples/`](examples/) | The machines, one directory each. Every directory has a `README.md`, a `README.pdf` and a `<dir>.zip` of its files. |
+| [`tests/`](tests/) | One test per machine. Each boots the machine in a scratch copy and checks what reaches the console. Run them with `tests/run.sh`. |
+| [`tools/`](tools/) | The scripts that build the README PDFs and the machine zips. |
+| `.github/workflows/` | CI. It rebuilds the PDFs and zips for what changed and commits them to the pull request. |
 
-## Tape, storage and I/O boards
-
-| | What it is |
-|---|---|
-| [`acr/`](examples/acr/) | Mike Douglas's **MITS Tapes** CP/M disk and **WRTAPE**, the utility that writes any of the MITS distribution BASICs back out through an **88-ACR** — a bootable audio cassette you can then load on `basic4k` / `basic8k` / `ps2`, or on real hardware. |
-| [`uio/`](examples/uio/) | The **88-UIO**, two cards in one — console and cassette on a single board — running Altair **8K BASIC 3.2**. |
-| [`io4/`](examples/io4/) | The **SSM IO-4 (2P + 2S)** as a console, running the SSM 8080 System Monitor. Explains the console straps. |
-| [`pb1/`](examples/pb1/) | The **SSM PB1** 2708/2716 EPROM programmer: SSM's own burner programs from the manual, and the burned chip read back as Intel HEX. |
-| [`pmmi/`](examples/pmmi/) | The **PMMI MM-103** modem, with a small 8080 program that turns it into a terminal. |
-| [`printing/`](examples/printing/) | An **88-C700 line printer**, and a banner program that prints through it. The README sets up a real printer on your host — a network printer over `socket:`, or a CUPS queue over `printer:` — and a page comes out. Per-OS host setup (macOS, Linux; Windows pending). |
-
-## Graphics and games
-
-| | What it is |
-|---|---|
-| [`dazzler/`](examples/dazzler/) | Li-Chen Wang's **Kaleidoscope** on a **Cromemco Dazzler** — a four-way-mirrored, 64×64, 16-color pattern that wanders and recolors forever. |
-| [`cadzilla/`](examples/cadzilla/) | The **CADzilla** graphics board's HD63484 ACRTC: `DRAWDEMO` shows every drawing command, one screen each, under CP/M. |
-| [`sol20/`](examples/sol20/) | A Processor Technology **Sol-20** with 1977 cassette games: TREK80, ATC, PAC-MAN and RAIDERS, each loading itself from its tape. |
+The PDFs and zips are generated; edit the Markdown and the machine files, never those.
