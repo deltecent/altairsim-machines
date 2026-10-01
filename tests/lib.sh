@@ -16,14 +16,14 @@ failures=0
 # Tests never run in the tracked tree: CP/M writes to the disk, and the image must stay as committed.
 #
 # By default the directory is copied. With MACHINE_SOURCE=zip the machine is instead UNZIPPED from
-# <dir>/<dir>.zip -- the file CI builds and people download -- and a missing zip is a failure.
+# examples/<dir>/<dir>.zip -- the file CI builds and people download -- and a missing zip is a failure.
 stage() {
   mkdir -p "$work/stage"
   if [ "${MACHINE_SOURCE:-dir}" = zip ]; then
-    [ -f "$root/$1/$1.zip" ] || { echo "tests: $1/$1.zip does not exist -- has CI built it? (git pull)" >&2; exit 2; }
-    unzip -q "$root/$1/$1.zip" -d "$work/stage"
+    [ -f "$root/examples/$1/$1.zip" ] || { echo "tests: examples/$1/$1.zip does not exist -- has CI built it? (git pull)" >&2; exit 2; }
+    unzip -q "$root/examples/$1/$1.zip" -d "$work/stage"
   else
-    cp -R "$root/$1" "$work/stage/"
+    cp -R "$root/examples/$1" "$work/stage/"
   fi
   echo "$work/stage/$1"
 }
