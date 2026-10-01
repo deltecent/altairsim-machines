@@ -5,7 +5,7 @@ description: Open a pull request for a change: push the branch, wait for CI to r
 
 # Open a pull request
 
-CI rebuilds every `README.pdf` and `<dir>/<dir>.zip` and commits the changed ones **to the PR
+CI rebuilds every `README.pdf` and `examples/<dir>/<dir>.zip` and commits the changed ones **to the PR
 branch** (`.github/workflows/docs.yml`). A change is not done until those files are on the branch
 and the tests pass against the unzipped result.
 
@@ -33,7 +33,7 @@ and the tests pass against the unzipped result.
    PDFs and machine zips for ..." to the branch. Run `git pull --ff-only`. If that fails because you
    also committed, `git pull --rebase`. No bot commit means no PDF or zip changed; say so.
 6. **Test the unzipped machines.** `MACHINE_SOURCE=zip tests/run.sh`. Each test unzips
-   `<dir>/<dir>.zip` into a scratch directory and boots it from there, so it tests the file a person
+   `examples/<dir>/<dir>.zip` into a scratch directory and boots it from there, so it tests the file a person
    downloads. A missing zip is a failure, not a skip: go back to step 5.
 7. **Report.** Give the PR URL, the CI result, which zips changed, and the test result. If a test
    fails, show its output. Do not say it passed if you did not run it.

@@ -5,7 +5,7 @@ description: Render README.md (the index) and each machine directory's README.md
 
 # README.md → README.pdf
 
-Every directory here has a `README.md` and a `README.pdf` beside it, and so does the top level.
+Every machine directory under `examples/` has a `README.md` and a `README.pdf` beside it, and so does the top level.
 A file manager has no Markdown viewer, so the PDF is what a person opens. **The PDF is generated;
 edit the Markdown, never the PDF.**
 
@@ -13,7 +13,7 @@ edit the Markdown, never the PDF.**
 
 ```sh
 tools/readme-pdf/build.sh              # every README.pdf in the repository
-tools/readme-pdf/build.sh fdcplus      # one directory
+tools/readme-pdf/build.sh fdcplus      # one directory under examples/
 tools/readme-pdf/build.sh . acr uio    # the top-level README, then two directories
 ```
 
@@ -53,6 +53,6 @@ A failed check leaves the old PDF in place. Fix the cause; do not copy the temp 
 - Comparing PDFs as bytes is useless: the subtitle stamp and Chrome's `/CreationDate` differ every
   build. To ask whether the content moved, compare `pdftotext` output with the stamp line removed.
 - Every machine directory needs a README.md; a directory without one gets no PDF. The build-all
-  run skips `tests/`, `tools/` and `tests-from-altairsim/` (not machines) and any directory with no README.md.
+  run covers the top-level README and `examples/*/README.md`; other directories are not machines.
 - Machine files and README text must agree: launch commands name the `.toml` in that directory,
   run from inside it.

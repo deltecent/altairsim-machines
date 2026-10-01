@@ -1,11 +1,11 @@
 #!/bin/sh
 #
-# Render README.md (the index) and every <dir>/README.md to a sibling README.pdf.
+# Render README.md (the index) and every examples/<dir>/README.md to a sibling README.pdf.
 #
 #   usage: tools/readme-pdf/build.sh [dir ...]
 #
 #   no arguments   rebuild every README.pdf in the repository
-#   dir ...        rebuild only those directories' (use . for the top-level README)
+#   dir ...        rebuild only those directories' (names under examples/; use . for the top-level README)
 #
 # Adapted from tools/build-docs.sh in the altairsim repository. Same pipeline, so the PDFs look
 # like the rest of altairsim's documents: pandoc turns the Markdown into one self-contained HTML
@@ -127,15 +127,13 @@ build_readme() {  # build_readme <src.md relative to root>
 }
 
 if [ "$#" -eq 0 ]; then
-  for abs in "$root"/README.md "$root"/*/README.md; do
+  for abs in "$root"/README.md "$root"/examples/*/README.md; do
     [ -f "$abs" ] || continue
-    # tests, tools and tests-from-altairsim are not machines: no PDF.
-    case "$abs" in */tests/*|*/tools/*|*/tests-from-altairsim/*) continue ;; esac
-    build_readme "${abs#"$root"/}"
+        build_readme "${abs#"$root"/}"
   done
 else
   for d in "$@"; do
     d=${d%/}
-    if [ "$d" = . ]; then build_readme README.md; else build_readme "$d/README.md"; fi
+    if [ "$d" = . ]; then build_readme README.md; else build_readme "examples/${d#examples/}/README.md"; fi
   done
 fi
