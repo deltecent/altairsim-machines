@@ -1,0 +1,81 @@
+
+
+                ;
+                ; MICROPLAY REV. A -- NEWTECH COMPUTER SYSTEMS, INC., JUNE 1977
+                ;
+                ; FROM THE MODEL 6 MUSIC BOARD USERS MANUAL. PLAYS THE SCORE AT 100H
+                ; THROUGH THE MODEL 6 AT PORT 24H. TIMED FOR AN 8080 AT 2 MHZ WITH
+                ; NO WAIT STATES.
+                ;
+                ; THE SCORE IS THREE BYTES A NOTE: THE PITCH CONSTANT, THEN THE
+                ; DURATION COUNT, LOW BYTE FIRST, WITH 1 ADDED TO THE HIGH BYTE.
+                ; A ZERO PITCH ENDS THE SCORE, AND THE PROGRAM LOOPS AT HERE.
+                ;
+                ; THE PROGRAM WRITES THE NOTE INTO ITS OWN INSTRUCTIONS AT XFER1
+                ; TO XFER4, SO IT MUST RUN IN RAM.
+                ;
+ 0100 =         SCORE   EQU     0100H           ;START OF THE SCORE
+ 0024 =         MODL6   EQU     24H             ;MODEL 6 OUTPUT PORT
+ 0000 =         LNGTH   EQU     0               ;PATCHED WITH THE DURATION
+ 0000 =         PITCH   EQU     0               ;PATCHED WITH THE PITCH
+                ;
+ 0000                   ORG     0
+                ;
+ 0000 317F00    BEGIN:  LXI     SP,STACK
+ 0003 210001    INIT:   LXI     H,SCORE
+ 0006 226D00            SHLD    PLACE
+ 0009 2A6D00    NEXT:   LHLD    PLACE
+ 000C 3E00              MVI     A,0
+ 000E BE                CMP     M
+ 000F CA0F00    HERE:   JZ      HERE            ;END OF SCORE: LOOP HERE
+ 0012 7E                MOV     A,M             ;PITCH
+ 0013 324100            STA     XFER2+1
+ 0016 326000            STA     XFER4+1
+ 0019 23                INX     H
+ 001A 7E                MOV     A,M             ;DURATION LSB
+ 001B 323A00            STA     XFER1+1
+ 001E 325D00            STA     XFER3+1
+ 0021 23                INX     H
+ 0022 7E                MOV     A,M             ;DURATION MSB
+ 0023 323B00            STA     XFER1+2
+ 0026 325E00            STA     XFER3+2
+ 0029 23                INX     H
+ 002A 226D00            SHLD    PLACE
+ 002D CD3300            CALL    PLAY
+ 0030 C30900            JMP     NEXT
+                ;
+ 0033 216500    PLAY:   LXI     H,TBL1          ;ENVELOPE POINTER
+ 0036 1E08              MVI     E,8             ;SEGMENT COUNT
+ 0038 7E                MOV     A,M             ;STARTING AMPLITUDE
+ 0039 010000    XFER1:  LXI     B,LNGTH         ;DURATION COUNT
+ 003C 40        LOOP2:  MOV     B,B             ;WASTE TIME
+ 003D C34000            JMP     XFER2
+ 0040 1600      XFER2:  MVI     D,PITCH         ;PITCH CONSTANT
+ 0042 D324              OUT     MODL6           ;OUTPUT HALF WAVE
+ 0044 34                INR     M               ;WASTE MUCH TIME
+ 0045 35                DCR     M
+ 0046 34                INR     M
+ 0047 35                DCR     M
+ 0048 34                INR     M
+ 0049 35                DCR     M
+ 004A 15        LOOP3:  DCR     D               ;DELAY ACCORDING TO PITCH
+ 004B C24A00            JNZ     LOOP3
+ 004E AE                XRA     M               ;COMPLEMENT A.
+ 004F 0D                DCR     C               ;COUNT DOWN DURATION
+ 0050 C23C00            JNZ     LOOP2
+ 0053 05                DCR     B
+ 0054 C24000            JNZ     XFER2
+ 0057 D324              OUT     MODL6
+ 0059 23                INX     H               ;NEXT SEGMENT
+ 005A 1D                DCR     E
+ 005B C8                RZ                      ;ALL SEGMENTS DONE
+ 005C 010000    XFER3:  LXI     B,LNGTH
+ 005F 1600      XFER4:  MVI     D,PITCH
+ 0061 7E                MOV     A,M             ;NEW AMPLITUDE
+ 0062 C34A00            JMP     LOOP3
+                ;
+ 0065 9530D0FEFFTBL1:   DB      095H,030H,0D0H,0FEH,0FFH,0FFH,030H,085H  ;ENVELOPE
+ 006D 0000      PLACE:  DW      0               ;SCORE POINTER
+ 007F =         STACK   EQU     $+10H
+                ;
+ 006F                   END
