@@ -1,0 +1,39 @@
+# MICROPLAY on a Newtech Model 6 Music Board: an Altair that plays "The Entertainer".
+#
+#     cd examples/newtech && altairsim newtech.toml
+#
+# The machine loads MICROPLAY and its score, and RUNs. On a build with SDL3 you hear the tune
+# on the sound output of your computer, about 38 seconds of it. In a headless build the
+# program runs the same and is silent.
+#
+# MICROPLAY does not stop at the end of the score. It loops at address 000F. Press STOP
+# (Ctrl-E) to get the altairsim> prompt, and RUN 0 to play the tune again.
+#
+# THE PATHS ARE RELATIVE TO THIS FILE, so the folder runs wherever it is copied to.
+#
+# THE MACHINE is the built-in `default` Altair (8080, front panel, 88-2SIO console at 10,
+# 56K of RAM) with two changes:
+#
+#   - cpu0    runs at 2 MHz. MICROPLAY makes each note with a timed loop, and Newtech timed
+#             the loop for an 8080 at 2 MHz. The board plays nothing at full speed
+#             (clock_hz = 0), because the pitch would have no relation to real time.
+#   - music0  is the Model 6, at port 24, the address the board had as supplied. MICROPLAY
+#             writes port 24.
+
+[machine]
+name    = "newtech"
+base    = "default"
+startup = ["LOAD MPLAY.HEX", "LOAD SCORE.HEX", "RUN 0"]
+
+# THE PROCESSOR, the base's own 8080 (`id` with no `type` means the board already in the
+# machine), with a 2 MHz crystal.
+[[board]]
+id       = "cpu0"
+clock_hz = 2000000
+
+# THE MUSIC BOARD. One output port, a 6-bit D/A converter and a speaker. It answers at ports
+# 24 to 27.
+[[board]]
+type = "music6"
+id   = "music0"
+port = 0x24
