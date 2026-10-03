@@ -1,0 +1,47 @@
+# SD Systems SBC-200, VDB-8024 video console and VersaFloppy II. The machine boots SDOS.
+#
+#     cd examples/sdsys
+#     altairsim sdosv.toml
+#     .                      <- the monitor prompt, ON THE VIDEO SCREEN (do not press Enter)
+#     C (Enter)              <- cold-boot SDOS from drive A
+#
+#     32K SD-OS Version 1.8B
+#     DELTEC ENTERPRISES LLC
+#
+#     [A]                    <- the SDOS prompt; type in the video window
+#
+# This is the video version of sdos.toml. It uses the VDB-8024 video board and the SDMONV21
+# monitor in place of the 8251 serial console. The prompt appears on an 80x24 screen, and there
+# is no baud detection. See sbc200v.toml.
+#
+# The keyboard is interrupt-driven. The monitor polls the VDB keyboard, but the video CBIOS of
+# SDOS reads the console under a Z80 mode-2 interrupt. The base machine straps the keyboard
+# strobe of the VDB to S-100 line VI2. The Z80-CTC of the SBC-200 changes it into the mode-2
+# vector 0x02, and the keyboard handler of the CBIOS reads the byte.
+#
+# The machine adds a VersaFloppy II to the sbc200v machine. Drive A has the video build of the
+# SDOS master.
+
+[machine]
+name = "sdosv"
+base = "sbc200v"
+
+# THE VERSAFLOPPY II -- a WD FD1791 soft-sector floppy controller at the standard 60H
+# port block. The DDBIOS drives it; `C` at the monitor prompt cold-boots SDOS.
+[[board]]
+type    = "versafloppy"
+id      = "vf0"
+variant = "vfii"
+port    = 60
+
+  # Drive A: the bootable SDOS master, the VIDEO build (8" single-sided double-density,
+  # 256-byte sectors, 26 sectors x 77 tracks, sysgen'd for a 32K system). Mounted
+  # read/write; `git checkout` restores the master if you want it pristine.
+  [[board.drive]]
+  unit  = 0
+  mount = "SDOS-18B-SSDDV-256-32K.DSK"
+
+# `crt = true` paints it that way, which suits this game. `SET DISPLAY crt=off` in the
+# monitor gives the sharp look back at any time (or delete this table to default to it).
+[display]
+crt = true

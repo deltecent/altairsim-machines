@@ -1,0 +1,39 @@
+# SD Systems SBC-200 and VersaFloppy II. The machine boots SDOS.
+#
+#     cd examples/sdsys
+#     altairsim sdos.toml
+#     (press Enter)          <- the monitor detects your baud rate from the CR
+#     .                      <- the monitor prompt
+#     C (Enter)              <- cold-boot SDOS from drive A
+#
+#     32K SD-OS Version 1.8B
+#     DELTEC ENTERPRISES LLC
+#
+#     [A]                    <- the SDOS prompt
+#
+# Press Enter first. The SBC-200 connects the RxD line of the 8251 to its /DSR input. MSMONR21
+# measures the start bit of the first character you type (a CR) to find the baud rate. It
+# prints nothing before then. This is correct for the real board. See the README beside this
+# file.
+#
+# The machine adds a VersaFloppy II to the sbc200 machine. The VersaFloppy II has an SDOS
+# master disk in drive A. The C, R, W and Z commands of the monitor drive it.
+
+[machine]
+name = "sdos"
+base = "sbc200"
+
+# THE VERSAFLOPPY II -- a WD FD1791 soft-sector floppy controller at the standard 60H
+# port block. The DDBIOS drives it; `C` at the monitor prompt cold-boots SDOS.
+[[board]]
+type    = "versafloppy"
+id      = "vf0"
+variant = "vfii"
+port    = 60
+
+  # Drive A: the bootable SDOS master (8" single-sided double-density, 256-byte sectors,
+  # 26 sectors x 77 tracks, sysgen'd for a 32K system). Mounted read/write -- SDOS can
+  # create and save files; `git checkout` restores the master if you want it pristine.
+  [[board.drive]]
+  unit  = 0
+  mount = "SDOS-18B-SSDDR-256-32K-MASTER.DSK"

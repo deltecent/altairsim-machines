@@ -1,0 +1,10 @@
+# The SD Systems SBC-200 with the MSMONR21 monitor. This is a small change to the built-in
+# `sbc200` machine. See the README beside this file.
+#
+#     cd examples/sdsys
+#     altairsim sbc200.toml
+#     (press Enter)   ->   .
+
+[machine]
+name = "sbc200-example"
+base = "sbc200"
