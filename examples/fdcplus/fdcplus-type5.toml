@@ -1,7 +1,7 @@
 # CP/M on the FDC+'s 1.5 MB floppy (drive type 5).
 #
 #     cd examples/fdcplus && altairsim fdcplus-type5.toml
-#     -> 48K CP/M 2.2b v2.3 ...
+#     -> 48K CP/M 2.2b v1.2
 #        A>
 #
 # CPM22-48K-HDF.dsk is Mike Douglas's CP/M 2.2 for the FDC+'s drive type 5: a 5.25" high-density
@@ -21,7 +21,7 @@ base = "default"
 # THE BOOT: EXAMINE FF00 / RUN, as on any disk Altair -- and it works although DBL CANNOT READ
 # THIS DISK. DBL looks for sector 0 of track 0 in 137-byte Altair sectors; this disk has none.
 # The FDC+ answers anyway. At every index hole where the 8080 has not asked for a 1.5 MB read,
-# the card's firmware hands over an Altair sector of its own, kept in its flash (HDFBL.ASM):
+# the board's firmware hands over an Altair sector of its own, kept in its flash (HDFBL.ASM):
 # track 0, a load that ends at 0080, 128 bytes of loader, FF and a good checksum. DBL loads it,
 # jumps to 0000, and that loader reads the real track 0 of the 1.5 MB disk to 4000h and runs it.
 startup = ["RUN FF00"]

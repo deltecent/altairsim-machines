@@ -5,7 +5,7 @@
 #        For Altair 8" Floppy
 #        A>
 #
-# THE DISKS ARE NOT IN THIS FOLDER. They are on a DRIVE SERVER -- the FDC+ Serial Drive Server
+# THE DISKS ARE NOT IN THIS DIRECTORY. They are on a DRIVE SERVER -- the FDC+ Serial Drive Server
 # on a PC, or any program that speaks its protocol -- at the other end of a serial cable. The
 # `fdcplus` board below is the FDC+ in serial-drive mode: it asks the server for a whole track at
 # a time, and writes changed tracks back. Mount a bootable 8" CP/M image (../cadzilla/'s
