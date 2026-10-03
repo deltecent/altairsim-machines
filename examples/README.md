@@ -21,6 +21,7 @@ These machines need the [altairsim](https://github.com/deltecent/altairsim) simu
 
 | | What it is |
 |---|---|
+| [`cdos/`](cdos/) | **CDOS 2.58**, the CP/M 1.4 work-alike of Cromemco, on a **Cromemco 16FDC** with its own boot PROM, from an 8″ mixed-density diskette (`cdos.toml`). `A.` |
 | [`fdcplus/`](fdcplus/) | **CP/M 2.2b** on an **FDC+**: from a serial drive server (`fdcplus-type7.toml`) or on the FDC+'s 1.5 MB floppy (`fdcplus-type5.toml`). |
 | [`hdsk/`](hdsk/) | **CP/M 2.2** booting off an Altair **88-HDSK "Datakeeper"** hard disk — an outboard controller moving whole sectors over an 88-4PIO — loaded by the HDBL PROM. `A0>` |
 | [`icom/`](icom/) | **CP/M 2.2** and iCOM's own **FDOS** on an **iCOM FD3712/FD3812** 8″ floppy controller: single-density CP/M (`cpm22.toml`), double-density CP/M (`cpm22-3812.toml`), **FDOS-III** (`fdos-iii.toml`) and **FDOS-I** (`fdos-i.toml`). `A>` for CP/M, `!` for FDOS. |

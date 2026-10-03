@@ -1,0 +1,55 @@
+# CDOS 2.58 on a Cromemco 16FDC. CDOS is the CP/M 1.4 work-alike of Cromemco. It boots from
+# an 8" double-sided diskette that has mixed densities.
+#
+# The 16FDC has a WD FD1793 floppy controller, a TMS 5501 UART (the console) and the RDOS 2.52
+# boot PROM. The setting `bootstrap = true` arms the PROM at C000, and the startup command runs
+# it. RDOS reads the boot track, loads the CDOS cold loader and jumps into CDOS.COM.
+#
+# Do not change clock_hz = 4000000. A real Cromemco runs at 4 MHz, and the double-density read
+# loop of RDOS needs that speed. At 2 MHz, a byte at 500 kbit/s arrives before the loop can take
+# it, and the FD1793 reports Lost Data.
+#
+# The console comes up with no RETURN. The 16FDC is set for its fixed 300-baud modem console
+# (switch 5 of RDOS). This setting skips the terminal speed measurement that needs a RETURN.
+# The `rate` of the tty is `full` by default, so the 300-baud setting does not slow the console.
+# To get the real 300-baud speed, set `rate = "real"` on the tty.
+
+[machine]
+name    = "cdos"
+startup = ["RUN C000"]
+
+# Z80 at the real Cromemco 4 MHz.
+[[board]]
+type     = "z80"
+id       = "cpu0"
+clock_hz = 4000000
+
+# The 16FDC: RDOS 2.52 PROM at C000-CFFF (bootstrap on -> auto-boots drive A), an FD1793,
+# and its onboard TMS 5501 wired as the console ('tty').
+[[board]]
+type      = "16fdc"
+id        = "fdc0"
+bootstrap = true
+drives    = 4
+
+  [board.unit.tty]
+  connect = "console"
+  # rate  = "real"   # uncomment for the authentic (slow) 300-baud modem-console timing
+
+  [[board.drive]]
+  unit  = 0
+  mount = "CDOS258-8IN-DSDD.DSK"
+
+# 64K of RAM -- a full Cromemco. The RDOS PROM shadows its C000 window on READS only, so RAM
+# is inhibited there during the boot but a write falls through; that lets CDOS relocate into
+# the RAM beneath the PROM and keep running once the PROM switches itself out (OUT 40H).
+[[board]]
+type           = "memory"
+id             = "mem0"
+fill           = "random"
+honors_phantom = "read"
+
+  [[board.region]]
+  type = "ram"
+  at   = 0000
+  size = "64K"
