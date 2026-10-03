@@ -26,6 +26,7 @@ These machines need the [altairsim](https://github.com/deltecent/altairsim) simu
 | [`fdcplus/`](fdcplus/) | **CP/M 2.2b** on an **FDC+**: from a serial drive server (`fdcplus-type7.toml`) or on the FDC+'s 1.5 MB floppy (`fdcplus-type5.toml`). |
 | [`hdsk/`](hdsk/) | **CP/M 2.2** booting off an Altair **88-HDSK "Datakeeper"** hard disk — an outboard controller moving whole sectors over an 88-4PIO — loaded by the HDBL PROM. `A0>` |
 | [`icom/`](icom/) | **CP/M 2.2** and iCOM's own **FDOS** on an **iCOM FD3712/FD3812** 8″ floppy controller: single-density CP/M (`cpm22.toml`), double-density CP/M (`cpm22-3812.toml`), **FDOS-III** (`fdos-iii.toml`) and **FDOS-I** (`fdos-i.toml`). `A>` for CP/M, `!` for FDOS. |
+| [`sdsys/`](sdsys/) | **SDOS 1.8B** and **SD Systems CP/M 2.2** on an **SD Systems SBC-200** Z80 single-board computer with a **VersaFloppy II** (`sdos.toml`, `cpm.toml`), the monitor alone (`sbc200.toml`), and a **VDB-8024** video console (`sbc200v.toml`, `sdosv.toml`). Press Enter, then `C`. `[A]` for SDOS, `A>` for CP/M. |
 | [`tarbell/`](tarbell/) | **CP/M 2.2** that boots itself off a **Tarbell** floppy controller and its own 32-byte boot PROM: single density (`tarbell.toml`, `tarbell` #1011) and double density, with and without DMA (`tarbelldd.toml`, `tarbelldd-dma.toml`). |
 
 ## Tape, storage and I/O boards

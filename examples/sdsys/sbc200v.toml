@@ -1,0 +1,20 @@
+# The SD Systems SBC-200 with a VDB-8024 video console. This is a small change to the built-in
+# `sbc200v` machine. See the README beside this file.
+#
+#     cd examples/sdsys
+#     altairsim sbc200v.toml
+#     .                        <- the monitor prompt, ON THE VIDEO SCREEN
+#
+# The machine runs the SD build of the monitor (SDMONV21) on the VDB-8024 video board. The
+# serial console of `sbc200.toml` is not used. The monitor prints its `.` prompt on the 80x24
+# screen. With SDL3, the screen is a window. Keys from the window or the terminal reach the
+# monitor. The commands are the same as on the serial machine.
+
+[machine]
+name = "sbc200v-example"
+base = "sbc200v"
+
+# `crt = true` paints it that way, which suits this game. `SET DISPLAY crt=off` in the
+# monitor gives the sharp look back at any time (or delete this table to default to it).
+[display]
+crt = true
