@@ -1,0 +1,40 @@
+#!/usr/bin/expect -f
+# Boot CDOS off the Cromemco 16FDC, type DIR and read the directory back.
+#
+# usage: expect -f cdos.exp <altairsim> <machine.toml>
+#
+# Piped stdin cannot drive this machine: the RDOS boot PROM reads the console during its
+# "ESC to abort" window, so a keystroke file is eaten or ends the run before CDOS is up. A pty
+# lets the test wait for the `A.` prompt and then type.
+set exe  [lindex $argv 0]
+set toml [lindex $argv 1]
+set timeout 60
+log_user 0
+
+proc bail {code msg} { if {$msg ne ""} { puts $msg }; catch {exec kill [exp_pid]}; exit $code }
+
+spawn $exe $toml
+
+expect {
+    -ex "CDOS version 02.58" {}
+    eof     { bail 1 "FAIL: $toml: the machine died before CDOS signed on" }
+    timeout { bail 1 "FAIL: $toml: CDOS never signed on" }
+}
+expect {
+    -ex "A." {}
+    eof     { bail 1 "FAIL: $toml: the machine died before the A. prompt" }
+    timeout { bail 1 "FAIL: $toml: no A. prompt" }
+}
+
+send -- "DIR\r"
+expect {
+    -ex "XMODEM" {}
+    eof     { bail 1 "FAIL: $toml: the machine died during DIR" }
+    timeout { bail 1 "FAIL: $toml: DIR did not list XMODEM" }
+}
+expect {
+    -ex "18 Files" {}
+    eof     { bail 1 "FAIL: $toml: the listing was cut short" }
+    timeout { bail 1 "FAIL: $toml: DIR printed no file count" }
+}
+bail 0 ""
