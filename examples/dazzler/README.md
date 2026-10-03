@@ -1,11 +1,13 @@
 # Color graphics on a Cromemco Dazzler
 
-Two machines, both with a **Cromemco Dazzler** in an Altair:
+Four machines, each with a **Cromemco Dazzler** in an Altair:
 
 | Machine file | What it is |
 |---|---|
 | `kscope.toml` | Li-Chen Wang's **Kaleidoscope**, an endless four-way-mirrored pattern. It comes up drawing. |
 | `dzmbasic.toml` | **DZMBASIC**, Microsoft BASIC with Dazzler graphics, under CP/M 2.2. You draw with `DZOP` and `DZF`. See [DZMBASIC under CP/M](#dzmbasic-under-cp-m). |
+| `games.toml` | The **Dazzler games** under CP/M 2.2, with a Cromemco **D+7A** for the joysticks and the sound. See [The games under CP/M](#the-games-under-cp-m). |
+| `gdemo.toml` | Cromemco's **GDEMO**, a demonstration of Dazzler graphics. It comes up drawing. See [GDEMO](#gdemo). |
 
 ## Kaleidoscope
 
@@ -126,6 +128,83 @@ holding `DZMBASIC.DSK` in drive 0, and a Dazzler at ports `0E`/`0F`.
 **There is no undo.** Drive 0 is read/write, so `SAVE` writes onto the image. Copy it first if you are about to
 save programs you care about.
 
+## The games under CP/M
+
+`games.toml` boots CP/M 2.2 off the 8" floppy in `GAMES.DSK`. That disk holds the Dazzler games.
+
+```
+cd examples/dazzler
+altairsim games.toml
+```
+
+```
+56K CP/M
+Version 2.2mits (07/28/80)
+Copyright 1980 by Burcon Inc.
+
+A>DIR
+A: 4DTICTAC COM : CHASE    COM : DAZOFF   COM : DAZON    COM
+A: CHESS    COM : DMATION  COM : DOGFIGHT COM : DOODLE   COM
+A: GOTCHA   COM : KSCOPE   COM : LIFE     COM : SKETCH   COM
+A: SPACEWAR COM : TANKWAR  COM : TRACK    COM : WRITER   COM
+A: XLIFE    COM : R        COM : W        COM : HDIR     COM
+A: LS       COM
+A>
+```
+
+To play a game:
+
+1. Type the name of a game at `A>`, for example `CHASE`, and press Return.
+2. Press **STOP** (`Ctrl-E`) to go back to the `altairsim>` prompt when the game has no exit.
+3. Type `RUN FF00` to boot CP/M again.
+
+On a build with **SDL3**, a window opens the first time a game turns the Dazzler on.
+**`Cromemco Dazzler Games - Instruction Manual (1978).pdf`** in this directory describes the
+Cromemco games.
+
+**The joysticks are on a Cromemco D+7A.** The games read two JS-1 joystick consoles through the
+D+7A board at ports `18` to `1F`. Each console has a joystick, four buttons and a speaker. Each
+console takes a gamepad if the host has one, and the keyboard if not. At the `altairsim>` prompt,
+`SHOW d7a0` shows what each console and each speaker is connected to.
+
+**The processor is a Z80 at 2 MHz.** The crystal gives the games a fixed speed. The speakers of
+the D+7A play only when the machine has a crystal.
+
+`games.toml` is the built-in `default` Altair with three changes. The 8080 is replaced by the
+Z80. The 88-DCDD holds `GAMES.DSK` in drive 0. A Dazzler at ports `0E`/`0F` and the D+7A are added.
+
+**There is no undo.** Drive 0 is read/write. Copy `GAMES.DSK` first if you are about to write
+files onto it.
+
+## GDEMO
+
+`gdemo.toml` loads Cromemco's **GDEMO** and RUNs it from its `startup` list. GDEMO is the
+"Dazzler Graphics Demo Program for Z80 Interface" (1978, version 00.08).
+
+```
+cd examples/dazzler
+altairsim gdemo.toml
+```
+
+```
+startup> LOAD GDEMO.HEX
+loaded 2691 bytes (12 pages) from GDEMO.HEX (0005-0B7F)
+startup> RUN 100
+```
+
+The machine is the Kaleidoscope machine with two changes: the Z80 runs at 2 MHz, and the guest
+is `GDEMO.HEX`. On a build with **SDL3** the window opens and comes to the front.
+
+Press **STOP** (`Ctrl-E`) to break back to the `altairsim>` prompt. `RUN 100` starts GDEMO again.
+
+**GDEMO needs the Z80.** The code at `0100` copies the program to `1000` with the Z80 instruction
+`LDIR` and jumps there.
+
+**GDEMO prints nothing and reads no keys on this machine.** GDEMO is a CP/M program, and this
+machine has no CP/M. GDEMO prints its messages with a `CALL` to `0005`, and `GDEMO.HEX` puts a
+`RET` at `0005`. GDEMO reads its `Ctrl-S` and `Ctrl-C` keys from a Cromemco console at ports
+`00`/`01`, and this machine has no board there.
+
 ## The files
 
 | File | What it is |
@@ -135,4 +214,9 @@ save programs you care about.
 | `dzmbasic.toml` | The DZMBASIC machine. |
 | `DZMBASIC.DSK` | The CP/M disk with `DZMBASIC.COM`. |
 | `DZMBASIC-Manual.pdf` | The manual for the `DZOP` statement and `DZF` function. |
+| `games.toml` | The games machine. |
+| `GAMES.DSK` | The CP/M disk with the Dazzler games. |
+| `Cromemco Dazzler Games - Instruction Manual (1978).pdf` | The instruction manual for the Cromemco games. |
+| `gdemo.toml` | The GDEMO machine. |
+| `GDEMO.HEX` | GDEMO as Intel HEX. |
 | `README.md`, `README.pdf` | This file, and the PDF CI builds from it. |

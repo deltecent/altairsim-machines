@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Two machines. dazzler/kscope.toml loads and starts Li-Chen Wang's Kaleidoscope. dazzler/dzmbasic.toml
-# boots CP/M and runs DZMBASIC, Microsoft BASIC with Dazzler graphics.
+# Four machines. dazzler/kscope.toml loads and starts Li-Chen Wang's Kaleidoscope. dazzler/dzmbasic.toml
+# boots CP/M and runs DZMBASIC, Microsoft BASIC with Dazzler graphics. dazzler/games.toml boots CP/M
+# off the games disk. dazzler/gdemo.toml loads and starts Cromemco's GDEMO.
 #
 # KSCOPE never stops and prints nothing, so its test is that the startup list loads the 127 bytes
 # and RUNs; the picture is in the window.
@@ -13,6 +14,13 @@
 #
 # A blank line follows each statement that touches the Dazzler: the next character typed while the Dazzler
 # library is still drawing is lost, as it would be on a real machine, and the blank absorbs it.
+#
+# GDEMO never stops and prints nothing on this machine, so its test is the same as KSCOPE's: the
+# startup list loads the 2691 bytes and RUNs.
+#
+# The games machine boots CP/M and reads the directory of GAMES.DSK. `A: 4DTICTAC COM` is the first
+# line of DIR. DIR stops after one line because a CR is already waiting in the keystroke file
+# (dazzler-games.keys). No game is started: a game prints nothing at the terminal.
 #
 # What the window shows is not checked; this tests the machine, not the pixels.
 set -u
@@ -28,6 +36,12 @@ expect_contains "cd dazzler && altairsim kscope.toml" "$out" "loaded 127 bytes" 
 
 out=$(run_machine "$dir" "$keys" 60 dzmbasic.toml)
 expect_contains "cd dazzler && altairsim dzmbasic.toml" "$out" "${want[@]}"
+
+out=$(run_machine "$dir" /dev/null 15 gdemo.toml)
+expect_contains "cd dazzler && altairsim gdemo.toml" "$out" "loaded 2691 bytes" "RUN 100" "[console"
+
+out=$(run_machine "$dir" "$here/keys/dazzler-games.keys" 60 games.toml)
+expect_contains "cd dazzler && altairsim games.toml" "$out" "machine: games" "56K CP/M" "A: 4DTICTAC COM"
 
 # By path from somewhere else: the disk is not in the working directory.
 out=$(run_machine "$work/stage" "$keys" 60 dazzler/dzmbasic.toml)
