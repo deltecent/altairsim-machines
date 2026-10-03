@@ -44,7 +44,10 @@ in order. Do not commit before step 4.
 5. **Check the README against `simplified-english`.** Run that skill on `examples/<dir>/README.md`.
    Apply the findings, then check the result again. The top comment of each machine file is also
    text a reader reads: apply the same standard to it.
-6. **Add the index entries.** Add a row to the right table in `examples/README.md`. Use the style of
+6. **Add the index entries.** This step is part of the work: an example with no row in
+   `examples/README.md` is not done, and a directory that was untracked often has none. Add a row
+   to the right table in `examples/README.md`, in alphabetical order by directory name. Keep each
+   table sorted. Use the style of
    the rows around it: a link, the system in bold, what boots, and the machine file names. Check
    the top-level `README.md` for a list that also needs the row.
 7. **Build the PDFs to look at them.** Run the `readme-pdf` skill so that you can see the new
