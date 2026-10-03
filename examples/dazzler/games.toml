@@ -1,0 +1,69 @@
+# The Cromemco Dazzler games, under CP/M 2.2, on an Altair.
+#
+#     cd examples/dazzler && altairsim games.toml
+#
+# It boots straight to A> off the 8" floppy beside this file. Type DIR to list the games, then
+# type the name of one, for example CHASE, TRACK, GOTCHA, TANKWAR, SPACEWAR or DOGFIGHT. On a
+# build with SDL3 a window opens the first time a game turns the Dazzler on. "Cromemco Dazzler
+# Games - Instruction Manual (1978).pdf", beside this file, describes the Cromemco games. In a
+# headless build a game runs the same and draws nothing.
+#
+# THE PATHS ARE RELATIVE TO THIS FILE, so the folder boots wherever it is copied to.
+#
+# THE MACHINE is the built-in `default` Altair (front panel, 88-2SIO console at 10, 88-DCDD at
+# 08, 56K of RAM, the DBL boot PROM at FF00) with three changes:
+#
+#   - cpu0  is a Z80 at 2 MHz. A Z80 runs 8080 guests unchanged. The crystal gives the games
+#           a fixed speed, and the D+7A speakers play only when the machine has a crystal.
+#   - daz0  is a Dazzler at ports 0E/0F, the Cromemco defaults. It decodes no memory: its
+#           picture is read out of ordinary RAM.
+#   - d7a0  is a Cromemco D+7A at ports 18-1F, the Cromemco default. It has the JS-1 joystick
+#           consoles that the games read.
+#
+# THE DISK holds CP/M 2.2 (MITS, 56K) and the games. Drive 0 is read/write: there is no undo,
+# so copy the image first if you mean to write files onto it.
+
+[machine]
+name    = "games"
+base    = "default"
+startup = ["RUN FF00"]        # EXAMINE FF00 / RUN on a real disk Altair: the DBL boot PROM
+
+# THE BACKSPACE KEY. A modern terminal sends DEL (7F); CP/M's line editor wants BS (08).
+[console]
+bsdel = "bs"
+
+# THE TERMINAL KEEPS THE KEYBOARD FOCUS when the window opens: the window does not jump to the
+# front. Type at the terminal and the picture draws in the window beside it. Keys typed in the
+# window still go to the console (`keyboard = "console"`).
+[display]
+focus    = false
+keyboard = "console"
+
+# THE PROCESSOR, a Z80 at 2 MHz, replacing the base's 8080, which runs flat out. `type` with
+# the base's id swaps the board.
+[[board]]
+type = "z80"
+id   = "cpu0"
+clock_hz = 2000000
+
+# THE DISK, in drive 0 of the base's own 88-DCDD (`id` with no `type` means the board already
+# in the machine).
+[[board]]
+id = "dsk0"
+
+  [[board.drive]]
+  unit  = 0
+  mount = "GAMES.DSK"
+
+# THE DAZZLER. Control/status at 0EH, format at 0FH. It needs a Display.
+[[board]]
+type = "dazzler"
+id   = "daz0"
+port = 0x0E
+
+# THE D+7A, at its default ports 18-1F. Port 18 reads the buttons of the two JS-1 consoles.
+# Ports 19-1C read the two joysticks, and a write to 19 or 1B drives a JS-1 speaker. Each
+# console takes a gamepad if the host has one, and the keyboard if not.
+[[board]]
+type = "d7a"
+id   = "d7a0"
