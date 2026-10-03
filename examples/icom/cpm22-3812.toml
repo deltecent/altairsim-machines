@@ -26,3 +26,12 @@ rom = "builtin:icom-fd3812-cpm"
   [[board.drive]]
   unit  = 0
   mount = "CPM22-3812-48K.dsk"
+
+# THE HOST BRIDGE at port B0 moves files in and out of a running CP/M guest. `hostdir = ""` is
+# the working directory of the shell.
+[[board]]
+type    = "hostbridge"
+id      = "hb0"
+port    = B0 
+hostdir = ""
+

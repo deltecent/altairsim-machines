@@ -42,7 +42,6 @@ original **FDOS-I** takes single-letter directives: `L` shows the directory, `A`
 | `CPM22-3812-48K.dsk` | The double-density CP/M system disk. |
 | `FDOS-III-2SIO.DSK` | The FDOS-III system disk. |
 | `FDOS-I-2SIO.DSK` | The FDOS-I system disk. |
-| `R.COM`, `W.COM`, `HDIR.COM` | The host bridge utilities. They copy files between the host folder and a CP/M disk. The single-density CP/M disk already has them, and `cpm22.toml` adds the host bridge board that they need. |
 
 **The disks have no undo.** Drive 0 is mounted read/write, as on a real machine. The guest writes
 to the disk for each file you create. In a clone, `git checkout` puts the disk image back. In a
