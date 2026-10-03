@@ -1,0 +1,40 @@
+# iCOM FD3712 single-density CP/M 2.2 -- boots the moment you start it.
+#
+#     cd examples/icom && altairsim cpm22.toml
+#     -> 48K CP/M 2.2
+#        A>
+#
+# THE DISK PATH IS RELATIVE TO THIS FILE. The disk image is in this directory. This file names
+# the image and no directory. Because of this, you can copy the folder anywhere and it still
+# boots.
+#
+# THIS FILE IS A DELTA. `base = "icom"` brings the machine -- 8080, 88-2SIO console at
+# 0x10, front panel, 48K RAM, and the iCOM FD3712 controller with its CP/M boot PROM at
+# F000. On top of that this file drops one single-density disk into drive 0. See the
+# built-in `icom` machine for the base.
+#
+# THE DISK IS TRACKED. In a clone, `git checkout` puts the image back after a write. A downloaded
+# copy has no such way to restore it. Copy the image before you test writes, or add
+# `readonly = true`.
+
+[machine]
+name = "icom-cpm22"
+base = "icom"
+
+# The FD3712 controller comes from the base; naming its id with no type ADDS the disk
+# rather than replacing the board.
+[[board]]
+id = "fdc0"
+
+  [[board.drive]]
+  unit  = 0
+  mount = "CPM22v1.0-3712-48K.DSK"
+
+# THE HOST BRIDGE at port B0 moves files in and out of a running CP/M guest. `hostdir = ""` is
+# the working directory of the shell.
+[[board]]
+type    = "hostbridge"
+id      = "hb0"
+port    = B0 
+hostdir = ""
+
