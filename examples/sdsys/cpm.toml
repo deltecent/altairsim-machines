@@ -25,7 +25,7 @@
 
 [machine]
 name    = "cpm22"
-startup = ["RUN E000"]                 # enter the onboard monitor PROM (as reset would)
+startup = ["RUN"]                      # the auto-start jumpers (start = E000) do the rest
 
 # THE CPU. A 4 MHz Z80. On the real board the CPU is on the SBC card itself; here it is
 # the generic z80 board, and the SBC card carries the 8251, CTC, parallel port and PROM.
@@ -42,6 +42,7 @@ type    = "sbc"
 id      = "sbc0"
 variant = "sbc200"
 port    = 7C
+start   = E000                         # auto-start: a reset reads the monitor PROM at E000
 
   [board.unit.tty]
   connect = "console"

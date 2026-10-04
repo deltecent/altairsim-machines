@@ -162,6 +162,4 @@ video machines write to the video screen. The test does not boot them.
 The serial console, the video console, the VersaFloppy disk, the keyboard interrupt of SDOS and
 CP/M (on the 8251 and on the VDB-8024) and the memory switch-out of the SBC-200 all work. The
 simulator models the Z80-CTC only as far as these keyboard interrupts need. Its baud-generator
-and timer channels cannot be seen at full speed. The reset auto-start jump is replaced by
-`startup = ["RUN E000"]`. The real board starts the PROM at the reset vector and releases it with
-`IN 7F`.
+and timer channels cannot be seen at full speed.
