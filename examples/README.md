@@ -49,4 +49,5 @@ These machines need the [altairsim](https://github.com/deltecent/altairsim) simu
 
 | | What it is |
 |---|---|
+| [`d7a/`](d7a/) | **MUSIC3**, a four-voice player of "The Star Spangled Banner" through a **Cromemco D+7A** on a Z80 at 4 MHz (`music3.toml`), and a CP/M machine with **M80** and **L80** that builds it from source (`music3-build.toml`). `A>` for the build machine. |
 | [`newtech/`](newtech/) | A **Newtech Model 6 Music Board**, a 6-bit D/A converter and a speaker: Newtech's own player, **MICROPLAY**, plays the score from the manual of the board, Scott Joplin's **"The Entertainer"**. |
