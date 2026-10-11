@@ -35,6 +35,7 @@ These machines need the [altairsim](https://github.com/deltecent/altairsim) simu
 | | What it is |
 |---|---|
 | [`acr/`](acr/) | Mike Douglas's **MITS Tapes** CP/M disk and **WRTAPE**, the utility that writes any of the MITS distribution BASICs back out through an **88-ACR** — a bootable audio cassette you can then load on `basic4k` / `basic8k` / `ps2`, or on real hardware. |
+| [`pb1/`](pb1/) | An **SSM PB1** 2708/2716 EPROM programmer board and the SSM 8080 System Monitor: SSM's own burner programs from the PB1 manual burn a chip, and `SAVE` writes it out as an Intel HEX file (`pb1.toml`). `.` |
 | [`uio/`](uio/) | **Altair 8K BASIC 3.2** from a cassette through one **88-UIO** board, which is the console and the cassette interface in one (`uio.toml`). `OK` |
 
 ## Graphics and games

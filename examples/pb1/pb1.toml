@@ -1,0 +1,89 @@
+# An Altair with an SSM PB1 EPROM programmer board.
+#
+#     cd examples/pb1 && altairsim pb1.toml
+#
+# The PB1 is a board, not a machine. This is a plain Altair (8080, RAM, a serial
+# console and the front panel) with the PB1 added, and with the SSM 8080 System
+# Monitor in a ROM at F000. The software of the PB1 manual (PROG2708.HEX and the
+# others) is written for that monitor. Each program ends with a jump to F021, the
+# re-entry of the monitor. The two check programs print through its console-out
+# routine at F009.
+#
+# The software also uses the SSM example addresses: control port 10H and the
+# programming window at D000. So the machine keeps those two free. The console is
+# an SSM IO-4 at ports 00-05, and RAM stops at CFFF so that the 4K window at D000
+# is not also RAM.
+#
+# WHAT YOU SEE: the machine cold-starts the monitor (startup RUN F000) and prints
+#
+#     MONITOR V1.0
+#     .
+#
+# BURN AND SAVE: press Ctrl-E for the altairsim> prompt, then type:
+#
+#     altairsim> LOAD your-data.hex        ; put the bytes to burn at 4000
+#     altairsim> LOAD PROG2708.HEX         ; the SSM 2708 burner (section 4.2)
+#     altairsim> RUN                       ; back to the SSM monitor
+#     G100                                 ; burn. The . prompt comes back.
+#     Ctrl-E
+#     altairsim> SAVE eprom.hex D000-D3FF  ; the burn, as an Intel HEX file on the host
+#
+# See the README beside this file.
+
+[machine]
+name    = "pb1"
+startup = ["RUN F000"]                 # cold-start the SSM 8080 monitor at its ORG
+
+# THE CPU. A stock 8080; clock_hz = 0 runs it flat out.
+[[board]]
+type     = "8080"
+id       = "cpu0"
+clock_hz = 0
+
+# THE CONSOLE: an SSM IO-4. Serial A (ports 0/1) is the console. The board
+# ships strapped altair-rev1, the SSM monitor's console convention, so no straps
+# are needed here. Serial B answers 2/3 and the parallel section 4/5, which
+# leaves the PB1's control port at its documented 10H.
+[[board]]
+type = "io4"
+id   = "io40"
+
+  [board.unit.a]
+  connect = "console"
+  baud    = 9600
+
+  [board.unit.b]
+  connect = "null"
+
+# THE FRONT PANEL, so RUN/EXAMINE/DEPOSIT and the sense switches work.
+[[board]]
+type = "fp"
+id   = "fp0"
+
+# THE PB1. Control port 10H, the 4K programming window at D000 -- exactly what the
+# SSM sample software (PROG2708/PROG2716) expects. Both sockets start with an
+# erased (all-FF) chip; burn one, then SAVE it.
+[[board]]
+type   = "pb1"
+id     = "pb1"
+port   = 10
+window = D000
+
+# 52K OF RAM (0000-CFFF) + the SSM 8080 monitor as a ROM at F000-F7FF. The
+# burner runs at 0100 and its source data sits at 4000, both below the PB1 window
+# at D000. The monitor sizes memory at cold start and puts its stack at the top
+# of the RAM it finds. Real static RAM does not come up zeroed.
+[[board]]
+type = "memory"
+id   = "mem0"
+fill = "random"
+
+  [[board.region]]
+  type = "ram"
+  at   = 0000
+  size = "52K"                         # 0000-CFFF
+
+  [[board.region]]
+  type  = "rom"
+  at    = F000
+  mount = "builtin:ssm-8080mon"        # SSM 8080 System Monitor V1.0
