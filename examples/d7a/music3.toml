@@ -1,0 +1,39 @@
+# MUSIC3: a four-voice music player on a Cromemco D+7A, on a bare Z80 machine.
+#
+#     cd examples/d7a && altairsim music3.toml
+#
+# The machine loads MUSIC3.HEX and runs it at 0100. The program plays "The Star Spangled
+# Banner" through the speaker of joystick 1, in about 60 seconds of emulated time. Then it
+# stops at an HLT. Press Ctrl-E to get the monitor prompt back.
+#
+# MUSIC3.HEX is built from MUSIC3.ASM by the other machine file in this folder,
+# music3-build.toml. The build has DEBUG set to 0. The program is then at 0100, the tempo is
+# 99h, and the sound goes to the DAC with OUT (19h),A. The program is not at 0000, so the
+# startup below must say RUN 100, not RUN 0.
+#
+# The paths are relative to this file, so the folder runs wherever it is copied to.
+#
+# The machine is the built-in `default` Altair with two changes:
+#
+#   - cpu0 is a Z80 at 4 MHz. The player uses the undocumented IYH and IYL instructions. Its
+#     frequency table is tuned for 4 MHz. The D+7A plays nothing on a machine that has no
+#     crystal (`clock_hz = 0`).
+#   - d7a0 is a Cromemco D+7A at ports 18-1F. The player writes to port 19, which is analog
+#     channel 1, the speaker of joystick 1. You hear the sound only on a build of altairsim
+#     that has a sound device. Without one, the program runs and the speaker stays silent.
+#
+# The program sets up its own stack, so the machine needs no disk and no boot PROM.
+
+[machine]
+name    = "music3"
+base    = "default"
+startup = ["LOAD MUSIC3.HEX", "RUN 100"]
+
+[[board]]
+type     = "z80"
+id       = "cpu0"
+clock_hz = 4000000
+
+[[board]]
+type = "d7a"
+id   = "d7a0"

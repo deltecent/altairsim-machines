@@ -1,0 +1,60 @@
+# The MUSIC3 build machine: CP/M 2.2b with the Microsoft M80 and L80, on an 8-inch floppy.
+#
+#     cd examples/d7a && altairsim music3-build.toml
+#     -> 56K CP/M 2.2b v2.3
+#        For Altair 8" Floppy
+#        A>
+#
+# This machine makes MUSIC3.HEX from MUSIC3.ASM. Then music3.toml plays it. The steps are in
+# README.md. In short, at the A> prompt:
+#
+#     R MUSIC3.ASM           copy the source from this folder to the disk
+#     R MUSIC3.SUB           copy the build commands
+#     SUBMIT MUSIC3          run M80 and L80
+#     W MUSIC3.HEX MUSIC3.HEX T      copy the HEX file back to this folder
+#
+# The paths are relative to this file. The disk is in this folder, and this file names it
+# with no directory, so the folder runs wherever it is copied to. The folder that altairsim
+# starts from is also the folder that R and W use on the host.
+#
+# This file is a delta. `base = "default"` brings the machine: the front panel, an 8080, an
+# 88-2SIO console at 10h, an 88-DCDD at 08h with four empty drives, 56K of RAM, the DBL boot
+# PROM at FF00 and the host bridge at B0h. This file adds the floppy in drive 0 and nothing
+# else.
+#
+# There is no undo on MUSIC3.DSK. CP/M writes the build files (MUSIC3.REL, MUSIC3.PRN and
+# MUSIC3.HEX) to drive A:, and drive 0 is mounted read/write. Copy the image first if you
+# want the original. Or add `readonly = true` to the drive below. Then CP/M cannot keep a
+# file, and it reports a write error.
+#
+# The image is 337,664 bytes. An 8-inch floppy is 337,568 bytes. The image has 96 bytes of
+# XMODEM padding on the end. The board probes the image as `8in` anyway, so this file has no
+# `media` key.
+#
+# CP/M 2.2b has 56K of RAM here, which is what the base machine has. Do not change the memory.
+
+#> MUSIC3 build machine: CP/M 2.2b with M80 and L80, in drive A.
+#> At the A> prompt, type R MUSIC3.ASM and R MUSIC3.SUB, then SUBMIT MUSIC3.
+
+[machine]
+name = "music3-build"
+base = "default"
+
+# The boot PROM is the boot command. RUN FF00 starts the DBL PROM, which loads CP/M from the
+# floppy. The keyboard then goes to the guest, so you land at the CP/M prompt. Ctrl-E (STOP)
+# gets you back to the monitor. Ctrl-C belongs to CP/M, where it is a warm boot.
+startup = ["RUN FF00"]
+
+# A modern terminal sends DEL (7Fh) for Backspace. The CP/M line editor needs BS (08h).
+# `bsdel = "bs"` changes DEL to BS on the way in, so Backspace erases at the A> prompt.
+[console]
+bsdel = "bs"
+
+# An `id` with no `type` means the board that the base already has: the 88-DCDD. This puts
+# the floppy in drive 0 of that board. It does not add a second controller.
+[[board]]
+id = "dsk0"
+
+  [[board.drive]]
+  unit  = 0
+  mount = "MUSIC3.DSK"
