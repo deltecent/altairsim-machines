@@ -9,6 +9,8 @@
 # with the Z flag clear. So a copy of the machine file gets a breakpoint at 000F for Z set, and
 # the stop must show HL at 0268, the address of the zero byte after the 120 notes.
 #
+# The score takes about 40 seconds at the speed of the clock, so the run gets 60.
+#
 # The input of that run is a pipe that stays open and sends nothing. A run whose input has
 # ended stops at once, before the first note is done.
 #
@@ -24,9 +26,9 @@ expect_contains "cd newtech && altairsim newtech.toml" "$out" \
 
 sed 's/"RUN 0"\]/"BREAK 000F IF Z==1", "RUN 0"]/' "$dir/newtech.toml" > "$dir/to-the-end.toml"
 mkfifo "$work/quiet"
-sleep 6 > "$work/quiet" &
+sleep 70 > "$work/quiet" &
 holder=$!
-out=$(run_machine "$dir" "$work/quiet" 10 to-the-end.toml)
+out=$(run_machine "$dir" "$work/quiet" 60 to-the-end.toml)
 kill "$holder" 2> /dev/null || true
 expect_contains "MICROPLAY plays all 120 notes and stops at the end of the score" "$out" \
   "stopped at 000F" "HL=0268"
