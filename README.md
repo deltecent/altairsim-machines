@@ -20,7 +20,7 @@ altairsim hdsk.toml
 | [`examples/`](examples/) | The machines, one directory each, with a `README.md` and `README.pdf`. Each directory also holds a `<dir>.zip` of all its files: download that one file, or the individual files, not both. |
 | [`tests/`](tests/) | One test per machine. Each boots the machine in a scratch copy and checks what reaches the console. Run them with `tests/run.sh`. |
 | [`tools/`](tools/) | The scripts that build the README PDFs and the machine zips. |
-| [`.claude/skills/`](.claude/skills/) | Instructions for Claude Code: `open-pr` (open a PR, watch CI, test the zips), `readme-pdf` (build the README PDFs) and `simplified-english` (the writing style for the READMEs). |
+| [`.claude/skills/`](.claude/skills/) | Instructions for Claude Code: `open-pr` (open a PR, watch CI, test the zips), `readme-pdf` (build the README PDFs) and `simplified-english` (the writing style for the READMEs). The `altairsim-*` skills come from the altairsim repository. Copy them by hand. This repository does not track them. |
 | `.github/workflows/` | CI. It rebuilds the PDFs and zips for what changed and commits them to the pull request. |
 
 The PDFs and zips are generated; edit the Markdown and the machine files, never those.
