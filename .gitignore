@@ -1,3 +1,10 @@
 .DS_Store
 .altairsim_history
 .claude/settings.local.json
+
+# Skills copied by hand from the altairsim repository
+.claude/skills/altairsim/
+.claude/skills/altairsim-cpm-build/
+.claude/skills/altairsim-cpm-text/
+.claude/skills/altairsim-hostbridge/
+.claude/skills/altairsim-mbasic/
