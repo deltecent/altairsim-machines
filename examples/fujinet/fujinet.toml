@@ -11,11 +11,17 @@
 #
 # WHERE THE FUJINET IS. The 88-2SIO at port 10H has two serial channels. Channel A (10H/11H)
 # is the console. Channel B (12H/13H) is the FujiNet, where the tools expect it. This file
-# connects channel B to the adapter at 76800 baud, so FUJIDIR and the other tools reach it
-# with no setup in CP/M.
+# sets channel B to 76800 baud, so FUJIDIR and the other tools reach the adapter with no setup
+# in CP/M.
 #
-# NAME YOUR SERIAL DEVICE. The `connect` line near the end is the only line to change. The
-# name depends on your computer:
+# NAME YOUR SERIAL DEVICE. The `connect` line near the end is a comment. Do one of these:
+#
+#   - Remove the "#" at the start of the line and put your device name in it.
+#   - Leave the file as it is and give the name on the command line with --set:
+#
+#     altairsim fujinet.toml --set "sio0:b connect=serial:/dev/cu.usbserial-AL009KFH"
+#
+# The name depends on your computer:
 #
 #     macOS    serial:/dev/cu.usbserial-XXXXXXXX     (use cu., not tty.)
 #     Linux    serial:/dev/ttyUSB0                   (or /dev/ttyACM0; add your user to
@@ -27,7 +33,7 @@
 # match the `baud` below. After you change it on the adapter, turn the adapter off and on.
 #
 # NO ADAPTER? Run FujiNet-PC (the RS232 build, from the FujiNet firmware releases) with an
-# empty `[Serial] port=`. Change the `connect` line to `socket:localhost:1985`. The steps are
+# empty `[Serial] port=`. Set `connect` to `socket:localhost:1985`. The steps are
 # in the README of the repository above.
 #
 # THE DISKS. FUJINET.DSK (drive A:) is CP/M 2.2b with the tools. PRN.DSK is drive B:.
@@ -41,12 +47,16 @@
 #> You land at the A> prompt. Try FUJIDIR with a TNFS server. FUJIGET, FUJIPUT and WGET
 #> print their usage when you type them with no argument.
 #>
-#> The serial device is named near the end of this file. Set it for your computer.
+#> Name the serial device for your computer. See the header of this file.
 
 [machine]
 name = "fujinet"
 base = "default"
 
+# SHOW SERIAL lists the serial ports of your computer, so you can copy the name of the
+# FujiNet port into the `connect` line (see the header). It runs before RUN, because RUN
+# hands the keyboard to CP/M.
+#
 # THE BOOT PROM IS THE BOOT COMMAND. There is no BOOT verb (DESIGN.md 10.0) -- a machine
 # that should start says so with the operator's own keystroke, and on a disk Altair that
 # keystroke was EXAMINE FF00 / RUN.
@@ -57,7 +67,7 @@ base = "default"
 # RUN hands the GUEST the keyboard, so you land at CP/M's prompt. STOP (^E) gets you back
 # to the monitor, and the guest cannot take it from you -- which matters, because ^C
 # belongs to CP/M (it is warm boot) and CP/M is entitled to read it.
-startup = ["RUN FF00"]
+startup = ["SHOW SERIAL", "RUN FF00"]
 
 # THE BACKSPACE KEY. A modern terminal's Backspace sends DEL (0x7F), and CP/M's line editor
 # wants BS (0x08) -- so without this, Backspace at the A> prompt does not erase. `bsdel = bs`
@@ -101,4 +111,4 @@ id = "sio0"
 
   [board.unit.b]
   baud    = 76800
-  connect = "serial:/dev/cu.usbserial-XXXXXXXX"   # Change this. See the header.
+# connect = "serial:/dev/cu.usbserial-XXXXXXXX"   # Set this, or use --set. See the header.
