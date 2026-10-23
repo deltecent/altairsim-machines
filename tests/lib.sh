@@ -63,6 +63,83 @@ expect_contains() {
   fi
 }
 
+# A machine that is typed at line by line, for a guest that discards keys typed before its
+# prompt (MP/M II does). Its keyboard is a FIFO that stays open, so the machine keeps running
+# while it waits for the next line. The fd is a number from 3 to 9, one for each machine.
+#
+#   start_machine <name> <fd> <cwd> <machine-file>
+#   wait_for <name> <text> <seconds> [<count>]   -- wait until <text> appears <count> times
+#   type_line <fd> <text>                        -- printf <text> to the machine's keyboard
+#   stop_machine <name> <fd>                     -- end it; its output is in "$work/<name>.out"
+start_machine() {
+  local name=$1 fd=$2 cwd=$3 toml=$4
+  rm -f "$work/$name.in" "$work/$name.out"
+  mkfifo "$work/$name.in"
+  ( cd "$cwd" && exec "$SIM" "$toml" < "$work/$name.in" > "$work/$name.out" 2>&1 ) &
+  eval "pid_$name=$!"
+  eval "exec $fd>\"\$work/\$name.in\""
+}
+
+wait_for() {
+  local name=$1 text=$2 secs=$3 count=${4:-1} i n
+  for i in $(seq 1 "$secs"); do
+    n=$(grep -oF -- "$text" "$work/$name.out" 2> /dev/null | wc -l)
+    [ "$n" -ge "$count" ] && return 0
+    sleep 1
+  done
+  return 1
+}
+
+type_line() {
+  printf '%b' "$2" >&"$1"
+}
+
+stop_machine() {
+  local name=$1 fd=$2 pid
+  eval "pid=\$pid_$name"
+  kill "$pid" 2> /dev/null || true
+  wait "$pid" 2> /dev/null || true
+  eval "exec $fd>&-"
+}
+
+# disk_get <disk> <dest> <file>... -- copy files off an 88-DCDD disk image with cpmtools. The
+# return status is 1 when a file is not on the disk.
+disk_get() {
+  local dsk=$1 dest=$2 f lc
+  shift 2
+  mkdir -p "$dest"
+  for f in "$@"; do
+    lc=$(echo "$f" | tr 'A-Z' 'a-z')
+    cpmcp -f altair "$dsk" "0:$lc" "$dest/$f" 2> /dev/null || return 1
+  done
+}
+
+# disk_has <label> <disk> <dir> <file>... -- each file on the 88-DCDD disk image must be the same
+# bytes as <dir>/<file>. cpmcp (cpmtools) reads the disk.
+disk_has() {
+  local label=$1 dsk=$2 dir=$3 f bad=0 got="$work/disk.$RANDOM"
+  shift 3
+  if ! command -v cpmcp > /dev/null; then
+    echo "FAIL: $label: no cpmcp on PATH (install cpmtools)" >&2
+    failures=$((failures + 1))
+    return
+  fi
+  for f in "$@"; do
+    if ! disk_get "$dsk" "$got" "$f"; then
+      echo "FAIL: $label: $(basename "$dsk") has no $f" >&2
+      bad=1
+    elif ! cmp -s "$dir/$f" "$got/$f"; then
+      echo "FAIL: $label: $f on $(basename "$dsk") is not $dir/$f" >&2
+      bad=1
+    fi
+  done
+  if [ "$bad" -eq 0 ]; then
+    echo "ok:   $label"
+  else
+    failures=$((failures + 1))
+  fi
+}
+
 finish() {
   [ "$failures" -eq 0 ] && exit 0
   echo "$failures check(s) failed" >&2
