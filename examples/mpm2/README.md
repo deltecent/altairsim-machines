@@ -30,7 +30,7 @@ this folder is for the Altair.
 | `MPM_II_System_Implementors_Guide_Aug82.md` | Notes on the *MP/M II System Implementor's Guide* of Digital Research. |
 | `MPMII_1/`, `MPMII_2/` | The two DRI MP/M II 2.1 distribution disks, as ImageDisk files (`MPMII_1.IMD`, `MPMII_2.IMD`), and the files on each disk. |
 
-The CP/NET server in [`../cpnet/`](../cpnet/) is this MP/M II with a network line.
+The CP/NET server of the [`cpnet` example](https://altairsim.com/downloads/examples/cpnet) is this MP/M II with a network line.
 
 ## Run it
 
@@ -616,7 +616,7 @@ For the System Support 1 disk, add `--xios SS1XIOS`:
 ```
 
 The script builds from the sources on `BUILD.DSK`. The `.ASM` files of this folder are copies of
-them, and `tests/test-mpm2.sh` checks that each pair is the same. After you change a source in
+them. After you change a source in
 this folder, put the new file on `BUILD.DSK`. For example, for `RESXIOS.ASM`:
 
 ```sh
@@ -627,10 +627,6 @@ cpmcp -f altair BUILD.DSK RESXIOS.ASM 0:
 After you change a source on `BUILD.DSK` with ED, copy it back with `cpmcp -f altair BUILD.DSK
 0:resxios.asm RESXIOS.ASM`.
 
-[`../cpnet/`](../cpnet/) has its own copies of `CPM22.DSK`, `MPMII_1.DSK`, the four sources
-and the files of `BUILD.DSK`. After you change one of these files here, copy it to
-`../cpnet/` too. `tests/test-cpnet.sh` checks that the copies are the same.
-
 The script prints each step and the memory map that GENSYS makes. A build from the same disks
 gives the same bytes. The SHA-256 of `MPM2.DSK` is `f31f5872…fca96172`, and the SHA-256 of
 `MPM2SS1.DSK` is `9a4853fc…67b55159`.
@@ -639,4 +635,4 @@ gives the same bytes. The SHA-256 of `MPM2.DSK` is `f31f5872…fca96172`, and th
 
 - The *MP/M II System Implementor's Guide* of Digital Research (August 1982), for how to
   write an XIOS and build a system.
-- [`../cpnet/README.md`](../cpnet/README.md), for CP/NET 1.2.
+- The README of the [`cpnet` example](https://altairsim.com/downloads/examples/cpnet), for CP/NET 1.2.

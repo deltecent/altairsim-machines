@@ -28,9 +28,9 @@ an Altair requester, connected by a serial line on port B of each **88-2SIO**.
 | `CPNET80.JPG` | A photo of the disk and its label. |
 | `dri-cpnet.md` | Notes on the DRI *CP/NET Network Operating System Reference Manual*. |
 
-The MP/M II of the server is the one in [`../mpm2/`](../mpm2/), with a network line in place
-of console 1. This folder has its own copies of the MP/M II files, so that it needs no other
-folder.
+The MP/M II of the server is the one of the [`mpm2` example](https://altairsim.com/downloads/examples/mpm2), with a network line in
+place of console 1. This folder has its own copies of the MP/M II files, so that it needs no
+other folder.
 
 ## Run it
 
@@ -144,9 +144,9 @@ Polling Process(es):
 ## The System Support 1 server
 
 `server-ss1.toml` is `server.toml` with a CompuPro System Support 1 at 50h in place of the
-88-VI/RTC. Its XIOS, `SS1XIOS.ASM`, is the one of `../mpm2/`. "The System Support 1 machine"
-in [`../mpm2/README.md`](../mpm2/README.md) tells how the XIOS uses the board, and how to set
-a real board.
+88-VI/RTC. Its XIOS, `SS1XIOS.ASM`, is the one of the `mpm2` example. "The System Support 1
+machine" in the README of the [`mpm2` example](https://altairsim.com/downloads/examples/mpm2) tells how the XIOS uses the board, and
+how to set a real board.
 
 - The timer of the System Support 1 gives the tick. The handler loads the timer again after
   each tick. Because of that, a tick that comes while NETWRKIF has interrupts disabled waits
@@ -189,8 +189,8 @@ The disks of this folder also run on two real Altairs. Write each `.DSK` image t
 5. Set the RTC of the 88-VI/RTC to count the 60 Hz line with no divider, and to interrupt on
    VI5. MP/M II takes RST 5 (0028h) as its tick. For `server-ss1.dsk`, use a System Support 1
    at 50h in place of the 88-VI/RTC. Set it as "The System Support 1 machine" in
-   `../mpm2/README.md` tells. Before the first boot, run `SS1TEST` from `../mpm2/` to test the
-   board. "Test a real System Support 1" in `../mpm2/README.md` tells how.
+   the README of the [`mpm2` example](https://altairsim.com/downloads/examples/mpm2) tells. Before the first boot, run `SS1TEST` of the
+   `mpm2` example to test the board. "Test a real System Support 1" in its README tells how.
 6. Boot each machine from the DBL PROM at FF00h. Boot the server first.
 
 The timeouts of NETWRKIF and SNIOS are loops for a 2 MHz 8080. The builds need one machine
@@ -307,11 +307,11 @@ cpmtools. To do the same:
 4. Format a new 88-DCDD disk with `AFORMAT B:` on CP/M. Add 96 zero bytes to the end of the
    image, as on the other disks of this folder.
 5. Copy the files to the new disk with `cpmcp -f altair`. `SRVBUILD.DSK` is a copy of
-   `../mpm2/BUILD.DSK` with `NETWRKIF.ASM` and `SERVER.RSP` added.
+   `BUILD.DSK` of the `mpm2` example with `NETWRKIF.ASM` and `SERVER.RSP` added.
 
 ## Build the server disk
 
-`server.dsk` is built under CP/M 2.2, the same way as `MPM2.DSK` of `../mpm2/`. Sections 1.2
+`server.dsk` is built under CP/M 2.2, the same way as `MPM2.DSK` of the `mpm2` example. Sections 1.2
 and 1.5 of the *MP/M II System Implementor's Guide* describe the steps. The build needs an
 Altair with two 88-DCDD drives and 56K of RAM, and these three disks:
 
@@ -552,9 +552,8 @@ A build from the same disks gives the same bytes:
 | `requester.dsk` | `956b025a…6489f971` |
 
 The builds use the sources on `SRVBUILD.DSK` and `REQBUILD.DSK`, not the `.ASM` files of this
-folder. `tests/test-cpnet.sh` checks that each copy on a disk is the same as the file of this
-folder. It also checks that the MP/M II files of this folder are the same as the ones in
-`../mpm2/`. After you change `NETWRKIF.ASM`, put the new file on `SRVBUILD.DSK`. `cpmcp` does
+folder. The `.ASM` files of this folder are copies of them. The MP/M II files of this folder
+are copies of the ones of the `mpm2` example. After you change `NETWRKIF.ASM`, put the new file on `SRVBUILD.DSK`. `cpmcp` does
 not write over a file, so remove the old file first:
 
 ```sh
@@ -566,4 +565,4 @@ cpmcp -f altair SRVBUILD.DSK NETWRKIF.ASM 0:
 
 - The *CP/NET Network Operating System Reference Manual* of Digital Research, for the
   message format, the serial protocol and the SNIOS entry points.
-- [`../mpm2/README.md`](../mpm2/README.md), for MP/M II on the Altair.
+- The README of the [`mpm2` example](https://altairsim.com/downloads/examples/mpm2), for MP/M II on the Altair.
