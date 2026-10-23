@@ -1,0 +1,76 @@
+# MP/M II 2.1 on an Altair: 88-DCDD floppies, an 88-2SIO with two consoles, and an
+# 88-VI/RTC for the tick. No bank-switched memory, so the XIOS is RESXIOS.ASM (beside
+# this file).
+#
+#     cd examples/mpm2 && altairsim mpm2.toml
+#     -> MP/M II V2.1 Loader, the memory map, then 0A>
+#
+# The three disks are in this folder. make-mpm2-disk.py built MPM2.DSK from DRI's images
+# (README.md says how). MPMII_1.DSK and MPMII_2.DSK hold the files of DRI's two disks. The
+# paths below are relative to this file.
+
+[machine]
+name = "mpm2"
+base = "default"
+
+# The DBL PROM loads BOOT from track 0. BOOT loads MPMLDR from the system tracks, and
+# MPMLDR loads MPM.SYS and starts MP/M II.
+startup = ["RUN FF00"]
+
+# The 8080 runs flat out (the default), and MP/M II boots in less than a second. The
+# RTC keeps real time at every processor speed. (In altairsim 1.3.4 and earlier, the RTC
+# ran fast with the 8080 flat out, and TOD gained about 100 seconds each second.)
+# For a 2 MHz 8080, as on a real Altair, remove the # from the three lines below. The
+# boot then takes about 15 seconds. At the monitor, SET cpu0 clock_hz=2000000 does the
+# same. The 88-DCDD code counts cycles, so it reads the disk at 2 MHz or flat out only.
+#[[board]]
+#id       = "cpu0"
+#clock_hz = 2000000
+
+# MP/M II needs RAM to FEFFh: GENSYS put the top of the OS at page FE. The DBL PROM
+# stays at FF00.
+[[board]]
+id = "mem0"
+  [[board.region]]
+  type = "ram"
+  at   = 0000
+  size = 0xFF00
+  [[board.region]]
+  type  = "rom"
+  at    = FF00
+  mount = "builtin:dbl"
+
+# Drive 0 is the MP/M disk, A:. Drives 1 and 2 hold the files of DRI's disks 1 and 2,
+# for B: and C:. Drive 3 is empty. Mount a copy of a CP/M 2.2 disk there for D:
+# (MOUNT dsk0:drive3 data.dsk).
+[[board]]
+id = "dsk0"
+
+  [[board.drive]]
+  unit  = 0
+  mount = "MPM2.DSK"
+
+  [[board.drive]]
+  unit  = 1
+  mount = "MPMII_1.DSK"
+
+  [[board.drive]]
+  unit  = 2
+  mount = "MPMII_2.DSK"
+
+# Console 0 is 2SIO port A, on the console. Console 1 is port B. A person reaches it
+# with `telnet localhost 8820`.
+[[board]]
+id = "sio0"
+  [board.unit.b]
+  connect = "telnet:8820"
+
+# The tick. The RTC counts the 60 Hz line with no divider and interrupts on VI5,
+# which is RST 5 (0028h). The XIOS sets flag 1 on each tick and flag 2 once a second.
+[[board]]
+type          = "virtc"
+id            = "vi0"
+port          = 0xFE
+rtc_source    = "line"
+rtc_divide    = 1
+rtc_interrupt = "vi5"

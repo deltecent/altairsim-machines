@@ -1,0 +1,35 @@
+# The CP/M 2.2 machine that builds the requester disk: an Altair with two 88-DCDD drives, as
+# README.md ("Build the requester disk") says.
+#
+#     cd examples/cpnet && altairsim reqbuild.toml
+#     -> 56K CP/M 2.2b v2.3, then A>
+#
+# CPM22.DSK boots CP/M 2.2 on A:, and becomes the requester disk. REQBUILD.DSK, on B:, holds
+# SNIOS.ASM and the requester files of CP/NET. The build writes on both disks, so work on
+# copies of them. The paths below are relative to this file.
+
+[machine]
+name = "cpnet-reqbuild"
+base = "default"
+
+# The DBL PROM boots CP/M from drive 0.
+startup = ["RUN FF00"]
+
+# The 8080 runs flat out (the default). For a 2 MHz 8080, as on a real Altair, remove
+# the # from the three lines below. The 88-DCDD code counts cycles, so it reads the
+# disk at 2 MHz or flat out only.
+#[[board]]
+#id       = "cpu0"
+#clock_hz = 2000000
+
+# Drive 0 is A:, and drive 1 is B:. The build needs no other drive.
+[[board]]
+id = "dsk0"
+
+  [[board.drive]]
+  unit  = 0
+  mount = "CPM22.DSK"
+
+  [[board.drive]]
+  unit  = 1
+  mount = "REQBUILD.DSK"

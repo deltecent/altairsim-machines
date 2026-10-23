@@ -1,0 +1,58 @@
+# The CP/NET server: MP/M II 2.1 on an Altair with 88-DCDD floppies, an 88-2SIO and an
+# 88-VI/RTC. 2SIO port A is the one console. Port B is the network line to the
+# requester, and listens on TCP port 8830. Start this machine before requester.toml.
+#
+#     cd examples/cpnet && altairsim server.toml
+#     -> MP/M II V2.1 Loader, the memory map, then 0A>
+#
+# server.dsk is in this folder. make-cpnet-disks.py built it from DRI's disks
+# (README.md says how). The path below is relative to this file.
+
+[machine]
+name = "cpnet-server"
+base = "default"
+
+# The DBL PROM loads BOOT from track 0. BOOT loads MPMLDR from the system tracks, and
+# MPMLDR loads MPM.SYS and starts MP/M II.
+startup = ["RUN FF00"]
+
+# A 2 MHz 8080, as on a real Altair. The timeouts of NETWRKIF and SNIOS are loop
+# counts.
+[[board]]
+id       = "cpu0"
+clock_hz = 2000000
+
+# MP/M II needs RAM to FEFFh: GENSYS put the top of the OS at page FE. The DBL PROM
+# stays at FF00.
+[[board]]
+id = "mem0"
+  [[board.region]]
+  type = "ram"
+  at   = 0000
+  size = 0xFF00
+  [[board.region]]
+  type  = "rom"
+  at    = FF00
+  mount = "builtin:dbl"
+
+[[board]]
+id = "dsk0"
+  [[board.drive]]
+  unit  = 0
+  mount = "server.dsk"
+
+# Port B is the network line, a raw byte pipe. requester.toml calls this port.
+[[board]]
+id = "sio0"
+  [board.unit.b]
+  connect = "socket:8830"
+
+# The tick. The RTC counts the 60 Hz line with no divider and interrupts on VI5,
+# which is RST 5 (0028h).
+[[board]]
+type          = "virtc"
+id            = "vi0"
+port          = 0xFE
+rtc_source    = "line"
+rtc_divide    = 1
+rtc_interrupt = "vi5"

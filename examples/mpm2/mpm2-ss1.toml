@@ -1,0 +1,75 @@
+# MP/M II 2.1 on an Altair: 88-DCDD floppies, an 88-2SIO with two consoles, and a
+# CompuPro System Support 1 for the tick and the time of day. No bank-switched memory, so
+# the XIOS is SS1XIOS.ASM (beside this file). mpm2.toml is the same machine with an
+# 88-VI/RTC in place of the System Support 1.
+#
+#     cd examples/mpm2 && altairsim mpm2-ss1.toml
+#     -> MP/M II V2.1 Loader, the memory map, then 0A>
+#
+# The three disks are in this folder. make-mpm2-disk.py built MPM2SS1.DSK from DRI's
+# images (README.md says how). MPMII_1.DSK and MPMII_2.DSK hold the files of DRI's two
+# disks. The paths below are relative to this file.
+
+[machine]
+name = "mpm2"
+base = "default"
+
+# The DBL PROM loads BOOT from track 0. BOOT loads MPMLDR from the system tracks, and
+# MPMLDR loads MPM.SYS and starts MP/M II.
+startup = ["RUN FF00"]
+
+# The 8080 runs flat out (the default), and MP/M II boots in less than a second. The
+# timer of the System Support 1 keeps real time at every processor speed.
+# For a 2 MHz 8080, as on a real Altair, remove the # from the three lines below. The
+# boot then takes about 15 seconds. At the monitor, SET cpu0 clock_hz=2000000 does the
+# same. The 88-DCDD code counts cycles, so it reads the disk at 2 MHz or flat out only.
+#[[board]]
+#id       = "cpu0"
+#clock_hz = 2000000
+
+# MP/M II needs RAM to FEFFh: GENSYS put the top of the OS at page FE. The DBL PROM
+# stays at FF00.
+[[board]]
+id = "mem0"
+  [[board.region]]
+  type = "ram"
+  at   = 0000
+  size = 0xFF00
+  [[board.region]]
+  type  = "rom"
+  at    = FF00
+  mount = "builtin:dbl"
+
+# Drive 0 is the MP/M disk, A:. Drives 1 and 2 hold the files of DRI's disks 1 and 2,
+# for B: and C:. Drive 3 is empty. Mount a copy of a CP/M 2.2 disk there for D:
+# (MOUNT dsk0:drive3 data.dsk).
+[[board]]
+id = "dsk0"
+
+  [[board.drive]]
+  unit  = 0
+  mount = "MPM2SS1.DSK"
+
+  [[board.drive]]
+  unit  = 1
+  mount = "MPMII_1.DSK"
+
+  [[board.drive]]
+  unit  = 2
+  mount = "MPMII_2.DSK"
+
+# Console 0 is 2SIO port A, on the console. Console 1 is port B. A person reaches it
+# with `telnet localhost 8820`.
+[[board]]
+id = "sio0"
+  [board.unit.b]
+  connect = "telnet:8820"
+
+# The tick and the time of day. Timer 0 of the 8253 counts 33333 cycles of the 2 MHz bus
+# clock in mode 0, for 60 Hz. It interrupts on IR1 of the slave 8259A, which CALLs 0024h. The XIOS sets
+# flag 1 on each tick and flag 2 once a second. At boot, the XIOS reads the MSM5832 clock
+# (the time of the host) and sets the date and time of MP/M II.
+[[board]]
+type = "ss1"
+id   = "ss0"
+base = 0x50

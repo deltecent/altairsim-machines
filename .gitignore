@@ -1,5 +1,6 @@
 .DS_Store
 .altairsim_history
+__pycache__/
 .claude/settings.local.json
 
 # Skills copied by hand from the altairsim repository

@@ -1,0 +1,35 @@
+# A CP/NET requester: CP/M 2.2 on an Altair with 88-DCDD floppies and an 88-2SIO.
+# 2SIO port A is the console. Port B is the network line, and calls the server of
+# server.toml on TCP port 8830. Start server.toml first, and wait for its 0A>.
+#
+#     cd examples/cpnet && altairsim requester.toml
+#     -> 56K CP/M 2.2b v2.3 ... A>
+#     A>CPNETLDR
+#     A>LOGIN
+#     A>NETWORK B:=A:
+#
+# requester.dsk is in this folder. make-cpnet-disks.py built it from DRI's files
+# (README.md says how). The path below is relative to this file.
+
+[machine]
+name = "cpnet-requester"
+base = "default"
+
+startup = ["RUN FF00"]
+
+# A 2 MHz 8080, as on a real Altair. The timeouts of SNIOS are loop counts.
+[[board]]
+id       = "cpu0"
+clock_hz = 2000000
+
+[[board]]
+id = "dsk0"
+  [[board.drive]]
+  unit  = 0
+  mount = "requester.dsk"
+
+# Port B is the network line, a raw byte pipe to the server.
+[[board]]
+id = "sio0"
+  [board.unit.b]
+  connect = "socket:localhost:8830"
