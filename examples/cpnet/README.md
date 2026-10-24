@@ -18,7 +18,7 @@ an Altair requester, connected by a serial line on port B of each **88-2SIO**.
 | `reqbuild.toml` | The CP/M 2.2 machine with two drives that builds the requester disk. |
 | `CPM22.DSK` | A CP/M 2.2 disk that boots, with the tools for the builds. |
 | `SRVBUILD.DSK` | The sources and the DRI files that the server build needs. |
-| `REQBUILD.DSK` | `SNIOS.ASM` and the requester files of CP/NET. |
+| `REQBUILD.DSK` | `SNIOS.ASM`, the requester files of CP/NET, and `LOGIN.ASM` and `LOGOFF.ASM`. |
 | `MPMII_1.DSK` | The files of DRI MP/M II disk 1. A copy of it becomes the new server disk. |
 | `RESXIOS.ASM`, `LDRBIOS.ASM`, `BOOT.ASM`, `AFORMAT.ASM` | The XIOS, the loader BIOS, the cold start loader and the disk format program of MP/M II. |
 | `SS1XIOS.ASM` | The XIOS of `server-ss1.toml`. |
@@ -229,7 +229,7 @@ The timeouts are DRI's counts. At 2 MHz, the requester waits about 95 ms for eac
 a message.
 
 The requester disk is a copy of `CPM22.DSK`. It has the requester files of the CP/NET disk,
-and a `SNIOS.SPR` that RMAC and LINK made from `SNIOS.ASM`.
+`LOGIN.ASM` and `LOGOFF.ASM`, and a `SNIOS.SPR` that RMAC and LINK made from `SNIOS.ASM`.
 
 The requester disk has the PIP of the CP/NET disk, PIP 1.5, in place of PIP 1.6 of the CP/M
 disk. PIP 1.6 sets byte 13 of the FCB to 0 before it closes a new file. MP/M II refuses that
@@ -489,7 +489,7 @@ disks:
 | Disk | What is on it |
 |---|---|
 | A copy of `CPM22.DSK` | The new requester disk. The CP/M on its system tracks boots the requester. |
-| `REQBUILD.DSK` | `SNIOS.ASM`. From the CP/NET disk: `NDOS.SPR`, `CCP.SPR`, `CPNETLDR.COM`, `NETWORK.COM`, `LOCAL.COM`, `LOGIN.COM`, `LOGOFF.COM`, `CPNETSTS.COM`, `DSKRESET.COM`, `ENDLIST.COM` and `PIP.COM`. |
+| `REQBUILD.DSK` | `SNIOS.ASM`. From the CP/NET disk: `NDOS.SPR`, `CCP.SPR`, `CPNETLDR.COM`, `NETWORK.COM`, `LOCAL.COM`, `LOGIN.COM`, `LOGOFF.COM`, `CPNETSTS.COM`, `DSKRESET.COM`, `ENDLIST.COM`, `MAIL.COM`, `PIP.COM`, `LOGIN.ASM` and `LOGOFF.ASM`. |
 
 The build writes on both disks. Use copies of them, and a copy of `CPM22.DSK` that the server
 build did not use. In the simulator, copy this folder again and start the requester build
@@ -509,7 +509,8 @@ CP/M boots from `CPM22.DSK` in A:, with `REQBUILD.DSK` in B:.
 4. Type `A:PIP A:=*.SPR[V]`. PIP copies `NDOS.SPR`, `CCP.SPR` and `SNIOS.SPR` to A:.
 5. Type `A:PIP A:=*.COM[V]`. PIP copies the CP/NET commands to A:. PIP 1.5 of the CP/NET
    disk replaces PIP 1.6 on A:.
-6. Type `A:`.
+6. Type `A:PIP A:=LOG*.ASM[V]`. PIP copies `LOGIN.ASM` and `LOGOFF.ASM` to A:.
+7. Type `A:`.
 
 The disk in A: is now the requester disk. To boot it:
 
@@ -549,7 +550,7 @@ A build from the same disks gives the same bytes:
 |---|---|
 | `server.dsk` | `d7dc7e98…eb8046b6` |
 | `server-ss1.dsk` | `2dbc6bf4…2057432b` |
-| `requester.dsk` | `956b025a…6489f971` |
+| `requester.dsk` | `ae687ec1…6c2de42d` |
 
 The builds use the sources on `SRVBUILD.DSK` and `REQBUILD.DSK`, not the `.ASM` files of this
 folder. The `.ASM` files of this folder are copies of them. The MP/M II files of this folder

@@ -68,7 +68,7 @@ disk_has "the source on REQBUILD.DSK is the file of the folder" "$dir/REQBUILD.D
 # The DRI files on the build disks are the ones on CPNET.DSK.
 dri="$work/cpnet-dri"
 req_files=(NDOS.SPR CCP.SPR CPNETLDR.COM NETWORK.COM LOCAL.COM LOGIN.COM LOGOFF.COM CPNETSTS.COM
-           DSKRESET.COM ENDLIST.COM PIP.COM)
+           DSKRESET.COM ENDLIST.COM MAIL.COM PIP.COM LOGIN.ASM LOGOFF.ASM)
 if ! disk_get "$dir/CPNET.DSK" "$dri" "${req_files[@]}" SERVER.RSP; then
   echo "FAIL: CPNET.DSK does not have the requester files and SERVER.RSP" >&2
   failures=$((failures + 1))
