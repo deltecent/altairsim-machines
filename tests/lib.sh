@@ -83,7 +83,8 @@ start_machine() {
 wait_for() {
   local name=$1 text=$2 secs=$3 count=${4:-1} i n
   for i in $(seq 1 "$secs"); do
-    n=$(grep -oF -- "$text" "$work/$name.out" 2> /dev/null | wc -l)
+    # -a: a guest can send a NUL (the PS II monitor does), and grep then counts no matches.
+    n=$(grep -aoF -- "$text" "$work/$name.out" 2> /dev/null | wc -l)
     [ "$n" -ge "$count" ] && return 0
     sleep 1
   done
