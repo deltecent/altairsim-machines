@@ -31,7 +31,6 @@ New machines:
 Changes:
 
 - `tarbell/`: new CP/M 2.2 disk images.
-- `cpnet/`: the requester disk now has `MAIL.COM`, `LOGIN.ASM` and `LOGOFF.ASM`.
 - New versions of the host bridge utilities `W.COM`, `R.COM` and `HDIR.COM` on the 14 disk images that have them. `cdos.toml` now has the host bridge board.
 - Each directory now has Markdown summaries of the board and operating system manuals.
 
