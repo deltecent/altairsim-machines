@@ -7,7 +7,10 @@
 # are relative to this file, so you can copy the directory anywhere and it still boots.
 #
 # The interrupts give you one thing: Ctrl-C. A word that the monitor does not know is a program
-# name, and the monitor searches the cassette for it forever. Ctrl-C returns you to the prompt.
+# name, and the monitor loads it from the device that ABS is open to. After OPN ABS,AC that is
+# the cassette, and Ctrl-C returns you to the prompt. When the monitor starts, ABS is open to the
+# terminal, and Ctrl-C does not stop that load. To get the prompt back, press ^E. At the
+# altairsim> prompt, type RUN 0x40.
 # This needs an 88-VI/RTC board and sense switch A9 down.
 
 [machine]

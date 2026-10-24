@@ -15,8 +15,15 @@ The monitor prompt is two spaces and a question mark:
 ```
 
 **Do not type a word to see what it does.** A word that the monitor does not know is a program
-name. The monitor then searches the cassette for that program and waits. This machine has
-interrupts on, so press `Ctrl-C` to get the prompt back.
+name. The monitor then loads that program from the device that ABS is open to, and waits. When
+the monitor starts, ABS is open to the terminal. `Ctrl-C` does not stop a load from the terminal.
+To get the prompt back:
+
+1. Press `Ctrl-E`.
+2. Type `RUN 0x40`. 0x40 (100 octal) is the restart address of the monitor.
+
+After `OPN ABS,AC` (step 1 of "Load the editor and the assembler"), the monitor searches the
+cassette, and `Ctrl-C` gets the prompt back.
 
 ## What is different
 
@@ -24,8 +31,8 @@ The built-in `ps2int` machine is the same hardware with 16K of RAM. This directo
 tapes, the loader and the steps to edit and assemble a program.
 
 - An **88-VI/RTC** board and sense switch A9 down turn on serial input interrupts. Then
-  `Ctrl-C` returns you to the monitor. The RTC interrupt output of the 88-VI/RTC is not
-  connected, because the monitor has no handler for it.
+  `Ctrl-C` returns you to the monitor, but not during a load from the terminal. The RTC
+  interrupt output of the 88-VI/RTC is not connected, because the monitor has no handler for it.
 - The console is Port A of an 88-2SIO at 0x10, strapped to vector 7.
 - The machine has 32K of RAM. The steps below move the edit buffer to 0x4000-0x5FFF.
 - The sense switches are `0x8C`. The loader is the 4K BASIC 3.2 bootstrap, not the 8K one.
