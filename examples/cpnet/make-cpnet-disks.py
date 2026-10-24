@@ -35,7 +35,7 @@
 #      must be the one on A:. The DBL PROM boots the disk into MP/M II.
 #   4. The machine of reqbuild.toml boots a copy of CPM22.DSK on A:, with a copy of
 #      REQBUILD.DSK on B:. On B:, RMAC and LINK make SNIOS.SPR. PIP copies the .SPR and
-#      .COM files of B: to A:, and A: is the requester disk.
+#      .COM files of B:, LOGIN.ASM and LOGOFF.ASM to A:, and A: is the requester disk.
 #
 # Exit status: 0 when both disks are written, 1 when a step fails. --keep keeps the work
 # directory, with the transcript of every session in it.
@@ -68,7 +68,7 @@ DISK1_DSK = os.path.join(SRC, "MPMII_1.DSK")
 # that close with extended error 6.
 REQUESTER_FILES = ["NDOS.SPR", "CCP.SPR", "CPNETLDR.COM", "NETWORK.COM", "LOCAL.COM",
                    "LOGIN.COM", "LOGOFF.COM", "CPNETSTS.COM", "DSKRESET.COM", "ENDLIST.COM",
-                   "PIP.COM"]
+                   "MAIL.COM", "PIP.COM", "LOGIN.ASM", "LOGOFF.ASM"]
 
 # GENSYS asks its questions in an order that depends on the answers. Each prompt is
 # matched by its text. A prompt that is not in this list stops the build. A list of
@@ -510,6 +510,7 @@ def build_requester(work):
         check_link(g.run("\r\nB>", "A:LINK SNIOS[OS]\r", timeout_ms=600000), "SNIOS")
         pip(g, "\r\nB>", "A:PIP A:=*.SPR[V]\r")
         pip(g, "\r\nB>", "A:PIP A:=*.COM[V]\r")
+        pip(g, "\r\nB>", "A:PIP A:=LOG*.ASM[V]\r")
         g.run("\r\nA>", "A:\r")
         text = g.run("\r\nA>", "STAT A:\r")
         g.run("\r\nA>", "\r")
