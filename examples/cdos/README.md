@@ -11,9 +11,9 @@ cd examples/cdos
 altairsim cdos.toml
 ```
 
-The machine has a 4 MHz Z80 processor, 64K of RAM and one 16FDC. The CDOS master diskette is
-in drive A. The machine file sets `bootstrap = true`, which arms the boot PROM. The machine
-then loads CDOS with no other setting.
+The machine has a 4 MHz Z80 processor, 64K of RAM, one 16FDC and a host bridge (`hb0`) at
+port B0. The CDOS master diskette is in drive A. The machine file sets `bootstrap = true`,
+which arms the boot PROM. The machine then loads CDOS with no other setting.
 
 ## Boot the machine
 
@@ -42,10 +42,24 @@ DIR       list the files on the disk
 STAT      show the system status: memory, devices, and the disk label and date
 ```
 
-`DIR` lists the 18 files on the master diskette. They include the assembler (`ASMB`, `LINK`),
-the editor (`EDIT`), the utilities (`XFER`, `INIT`, `DUMP`, `STAT`), `XMODEM` and CDOS
-itself. `STAT` reads the label sector of the disk. It prints `CDOS2.58` and the date
-`05-19-82`.
+`DIR` lists the 19 files on the master diskette. They include the assembler (`ASMB`, `LINK`),
+the editor (`EDIT`), the utilities (`XFER`, `INIT`, `DUMP`, `STAT`), `XMODEM`, the host bridge
+programs (`R`, `W`, `HDIR`) and CDOS itself. `STAT` reads the label sector of the disk. It
+prints `CDOS2.58` and the date `05-19-82`.
+
+## Copy files to and from the host
+
+The host bridge moves files between the host and the CDOS disk. Type these commands at the
+`A.` prompt:
+
+```
+HDIR [pattern]                   list the files in the host folder
+R <hostfile> [cpmfile]           copy a host file to the disk
+W <cpmfile> [hostfile] [B|T]     copy a file on the disk to the host
+```
+
+The host folder is the folder that you start `altairsim` from. To use a different folder, set
+`hostdir` on the `hb0` board in the machine file.
 
 ## How the boot works
 

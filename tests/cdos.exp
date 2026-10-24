@@ -33,7 +33,7 @@ expect {
     timeout { bail 1 "FAIL: $toml: DIR did not list XMODEM" }
 }
 expect {
-    -ex "18 Files" {}
+    -ex "19 Files" {}
     eof     { bail 1 "FAIL: $toml: the listing was cut short" }
     timeout { bail 1 "FAIL: $toml: DIR printed no file count" }
 }
