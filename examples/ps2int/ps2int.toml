@@ -1,0 +1,97 @@
+# MITS Programming System II, with interrupts, booted from cassette.
+#
+#     cd examples/ps2int && altairsim ps2int.toml
+#     ->   ?
+#
+# This is the built-in `ps2int` machine with the tape and the loader beside it. The paths below
+# are relative to this file, so you can copy the directory anywhere and it still boots.
+#
+# The interrupts give you one thing: Ctrl-C. A word that the monitor does not know is a program
+# name, and the monitor searches the cassette for it forever. Ctrl-C returns you to the prompt.
+# This needs an 88-VI/RTC board and sense switch A9 down.
+
+[machine]
+name = "ps2int"
+
+# What a human did: put the monitor tape in and press PLAY (that is MOUNT), toggle in
+# the bootstrap, and run it from 0. The bootstrap is the 4K BASIC 3.2 loader, not the 8K one.
+startup = [
+  "MOUNT acr0:tape \"PS2-MON.TAP\"",
+  "LOAD \"LDRPS2.HEX\"",
+  "RUN 0",
+]
+
+# SENSE = 0x8C.
+#
+#     A15 -> bit 7 = 0x80    cassette load
+#     A11 -> bit 3 = 0x08  \ 2SIO terminal
+#     A10 -> bit 2 = 0x04  /
+#     A9  -> bit 1 = 0x00    DOWN: the monitor uses serial input interrupts
+#
+# A9 is inverted: UP means "no interrupts". The built-in `ps2` machine has A9 up (0x8E).
+[[board]]
+type  = "fp"
+id    = "fp0"
+sense = 0x8C
+
+[[board]]
+type     = "8080"
+id       = "cpu0"
+clock_hz = 0        # flat out (the default). `SET cpu0 clock_hz=2000000` for the real 2 MHz.
+
+# THE 88-VI/RTC. The package assumes that this board is present.
+#
+# The monitor enables the real-time clock interrupt but has no handler for it. On a real board
+# you leave the RTC interrupt output (RI) unjumpered. `rtc_interrupt = "none"` is that missing
+# jumper. Do not change it.
+[[board]]
+type          = "virtc"
+id            = "vi0"
+port          = 0xFE      # 376 octal. Write-only.
+rtc_interrupt = "none"
+
+# The console: an 88-2SIO at 0x10. Its 6850 is strapped to VI7, so a key vectors through
+# RST 7 to 0x0038, where the monitor has its handler.
+[[board]]
+type = "2sio"
+id   = "sio0"
+port = 10
+
+  [board.unit.a]
+  connect   = "console"
+  baud      = 9600
+  interrupt = "vi7"   # -> RST 7 -> 0x0038. "Serial port 1 set to vector 7."
+
+  [board.unit.b]
+  connect = "null"
+  baud    = 9600
+
+# The cassette: an 88-ACR at 0x06. It takes no part in interrupts. The tape loads as fast as
+# the guest reads it. `SET acr0:tape rate=real` loads at the real 300 baud.
+[[board]]
+type = "acr"
+id   = "acr0"
+port = 06
+
+# 32K. The built-in `ps2int` has 16K, which holds the monitor, the editor and AM2. The README
+# moves the edit buffer to 0x4000-0x5FFF so that it does not grow into AM2, and that needs RAM
+# above 16K.
+[[board]]
+type = "memory"
+id   = "mem0"
+
+  [[board.region]]
+  type = "ram"
+  at   = 0000
+  size = "32K"
+
+# The terminal. The monitor computes even parity into bit 7 of every character that it sends,
+# so `strip7out` removes it. `upper` folds what you type to upper case: the monitor knows only
+# upper case. [terminal] does the same for the built-in terminal window.
+[console]
+strip7out = true
+upper     = true
+
+[terminal]
+strip7out = true
+upper     = true
