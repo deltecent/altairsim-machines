@@ -127,6 +127,7 @@ To save to a new tape, mount a new file for recording. See "Tapes" in the altair
 |---|---|
 | `ps2int.toml` | The machine file: the front panel, an 8080, an 88-VI/RTC, an 88-2SIO, an 88-ACR and 32K of RAM. |
 | `LDRPS2.HEX` | The bootstrap loader (the 4K BASIC 3.2 loader). The machine file puts it in memory at address 0. |
+| `LDRPS2.ASM` | The source for `LDRPS2.HEX`. It is `LDR4K32.ASM` from the Cassette Loaders directory on deramp.com. |
 | `PS2-MON.TAP` | The monitor tape. The machine file mounts it. |
 | `PS2-EDT.BIN` | The editor tape. |
 | `PS2-AM2.BIN` | The assembler, version 2. It loads above the editor. |
