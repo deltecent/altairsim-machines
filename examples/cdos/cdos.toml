@@ -53,3 +53,11 @@ honors_phantom = "read"
   type = "ram"
   at   = 0000
   size = "64K"
+
+# THE HOST BRIDGE at port B0 moves files in and out of a running CDOS guest, with R.COM, W.COM
+# and HDIR.COM on the disk. `hostdir = ""` is the working directory of the shell.
+[[board]]
+type    = "hostbridge"
+id      = "hb0"
+port    = B0
+hostdir = ""

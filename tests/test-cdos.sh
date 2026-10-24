@@ -2,7 +2,7 @@
 # cdos/cdos.toml boots CDOS 2.58 off a Cromemco 16FDC.
 #
 # The RDOS PROM and the FD1793 load CDOS from a mixed-density 8" diskette. DIR then reads the
-# directory off the disk: `XMODEM` and `18 Files` can only come from the platter. This needs
+# directory off the disk: `XMODEM` and `19 Files` can only come from the platter. This needs
 # expect because piped keystrokes derail the PROM's ESC-to-abort window (see cdos.exp).
 set -u
 . "$(dirname "$0")/lib.sh"
