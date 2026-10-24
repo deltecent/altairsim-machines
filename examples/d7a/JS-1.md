@@ -1,0 +1,149 @@
+# Cromemco JS-1 Joystick Console
+
+Source: Cromemco JS-1 Joystick Manual.pdf
+
+Cromemco, Inc., "JS-1 Joystick Console", fetched from manx-docs.org
+(`.../harte/Cromemco/Cromemco JS-1 Joystick Manual.pdf`). **Not an S-100 board** — a
+peripheral that plugs into the [D+7A analog I/O board](D+7A.md) over a 12-conductor
+cable. One D+7A interfaces **one or two** JS-1 consoles. Each console is a two-axis
+joystick, four push-button switches, and an audio amplifier + 100 Ω speaker in one
+enclosure. Cromemco shipped the Dazzler games **Dazzle Doodle**, **Track**, and
+**Chase!** to use it.
+
+This file captures how a JS-1 presents to software — which D+7A ports carry the axes,
+buttons, and speaker. The pots, diodes, and speaker-amp transistor are hardware detail.
+
+---
+
+## 1. What a JS-1 is, electrically
+
+- **Two-axis joystick**: an X pot and a Y pot across ±12 V (clamped by two 1N5242
+  12 V zeners). Each wiper is a D+7A **analog input** — the A/D reads the stick
+  position as a two's-complement byte (centered ≈ 0x00).
+- **Four push-buttons** (SW1–SW4), each with a 10 kΩ resistor, wired to four bits of
+  the D+7A **parallel input** port.
+- **Speaker + amp**: a 2N3904 driving a 100 Ω speaker, fed from a D+7A **analog
+  output** (D/A). Sound is made by the CPU writing a waveform to that D/A in a timed
+  loop.
+
+## 2. Recommended D+7A port assignment
+
+Cromemco's recommended straps (D+7A base 030 octal = 0x18), from the manual:
+
+**Console 1**
+
+| Signal | D+7A port | Notes |
+|--------|-----------|-------|
+| Joystick **X** axis | analog input **031 (0x19)** | A/D, two's-complement |
+| Joystick **Y** axis | analog input **032 (0x1A)** | A/D, two's-complement |
+| SW1 | parallel input **030 (0x18)** bit **D0** | |
+| SW2 | parallel input 030 bit **D1** | |
+| SW3 | parallel input 030 bit **D2** | |
+| SW4 | parallel input 030 bit **D3** | |
+| Speaker | analog **output** **031 (0x19)** | D/A — same port # as X-axis, opposite direction |
+
+**Console 2**
+
+| Signal | D+7A port | Notes |
+|--------|-----------|-------|
+| Joystick **X** axis | analog input **033 (0x1B)** | |
+| Joystick **Y** axis | analog input **034 (0x1C)** | |
+| SW1–SW4 | parallel input 030 (0x18) bits **D4–D7** | the high nibble |
+| Speaker | analog **output** **033 (0x1B)** | |
+
+Note the elegance the D+7A's independent read/write per port buys: console 1's X-axis
+A/D **input** and its speaker D/A **output** are the *same port number* 0x19, read one
+way and written the other. So both consoles fit in two analog ports each plus the one
+shared parallel input byte.
+
+**One source disagreement — output only, matters only for sound.** The JS-1 manual routes
+console 2's speaker to analog output **1BH** (033 octal), the same port as its X-axis A/D
+*input*. The s100computers.com Dazzler II board instead drives *both* speakers from the
+low two outputs — JS1 speaker = `OUT 19H`, **JS2 speaker = `OUT 1AH`** — and implements no
+other analog outputs. Reading the joysticks is identical either way; the disagreement is
+purely which port carries console 2's D/A.
+
+The manual adds a hardware note for two-console use: D+7A resistors R29/R30 must be
+10 Ω (jumpers), not 100 Ω. That is a board strap, not software-visible.
+
+## 3. Button polarity — ACTIVE-LOW (pressed = 0)
+
+The JS-1 manual is clear on the *wiring* (SW1→D0 … SW4→D3, each with a 10 kΩ resistor)
+but does **not** state the read polarity in prose. It is **active-low**: the switches are
+pulled to +5 V through 10 kΩ, so a bit reads **1 when released and 0 when pressed**. An
+idle (or absent) console reads its nibble all-1s; a press pulls that bit to 0.
+
+Settled from three independent sources, all agreeing:
+
+- **The s100computers.com "Dazzler II" board**, a modern S-100 card that implements the
+  D+7A's joystick core circuit, describes port 18H's button bits as *"Low if pressed"*
+  with *"+5V from 10K source"* — a hardware statement of active-low. It also confirms the
+  two's-complement analog scale (80H = −, 00H = center, 7FH = +) and the input port map.
+- **ADCTEST** (`adctest.hex`, a period D+7A/joystick diagnostic, disassembled): reads the
+  buttons at `IN 18H` and the four axes at `IN 19H`/`1AH` (console 1) and `IN 1BH`/`1CH`
+  (console 2) — a first-hand artifact confirming §2's port map exactly.
+- **David Hansel's Arduino Altair 8800** simulator firmware builds the joystick byte as
+  `if (!joy->b1) daz_msg[0] |= 1;` — the bit is set (=1) when the button is *not* pressed
+  — and sends X/Y as signed bytes centered at 0.
+
+## 4. What each game accepts — from the games' own code
+
+Two Cromemco programs test the reading, and they do not agree. A real stick clearly goes
+past ±64: one program needs it to, and the other has a test for when it does.
+
+**GOTCHA needs a size of `40` or more, and cannot take `80`.** At start it reads each
+axis at rest and stores the complement as an adjustment (`INTJOY`: `IN` / `CPL`), so a
+rest reading of `00` gives `FF` (−1). For each move it adds the adjustment to the reading
+and tests the result (`FNDDIR`). The code below is in `GOTCHA.COM` on the Dazzler Games
+disk, at `026E` after the program moves itself to address 0 (`INTJOY` is at `01FD`); the
+labels are from a source listing of the game:
+
+```
+LD   A,B        ; the adjusted up/down reading
+AND  A
+JP   M,FDR300   ; negative -> down: CPL, then the same test
+LD   D,1        ; positive -> up
+CP   40H
+JP   NC,FDR330  ; "LARGE MOVEMENT" -- only then is it a direction
+LD   D,0        ; else no change
+```
+
+So a stick that stops at +63 (`3F`) gives `3F` + `FF` = `3E`, which is not a move: it
+cannot steer GOTCHA right or up at all. And a reading of `80` gives `80` + `FF` = `7F`,
+which is a large move the **opposite** way.
+
+**Dazzle-Doodle draws only for −64…+63.** The Cromemco *Dazzler Games* manual prints the
+**full 8080 source listing** of the program (pp. 5–7; a real Cromemco artifact, not a
+third-party disassembly):
+
+```
+IN   031      ; read X-axis A/D   (port 0x19 = console-1 X)
+ADI  100      ; add 0x40 (octal 100 = 64)
+JP   .+range  ; if result is POSITIVE (bit7 clear) the reading is IN RANGE
+MVI  B,000    ; else zero B -> SUPPRESS the screen write ("voltage out of range")
+RAR           ; halve the surviving displacement
+MOV  E,A      ; X displacement -> E
+```
+
+Y is identical (`IN 032` = 0x1A) with an added `CMA` after `RAR` — i.e. **the software
+itself inverts Y**. Working the `ADI 0x40; JP` test over
+every byte value, a pixel is written **only** when the raw A/D reading is in:
+
+| Raw A/D byte (signed) | in range? |
+|---|---|
+| `0x00`…`0x3F`  (0 … +63)   | **yes — draws** |
+| `0x40`…`0x7F`  (+64 … +127) | no — suppressed |
+| `0x80`…`0xBF`  (−128 … −65) | no — suppressed |
+| `0xC0`…`0xFF`  (−64 … −1)   | **yes — draws** |
+
+`RAR` then halves the survivors into the ±31/32 displacement a 64×64 Dazzler grid needs.
+With a full-scale stick, Doodle draws while the stick is inside half deflection and stops
+when it is pushed past that. A stick that stops at ±64 keeps Doodle drawing, but cannot
+steer GOTCHA.
+
+## 5. Parts (informative)
+
+Two-axis joystick, 4 push-button switches, 100 Ω speaker, 12-conductor cable, two
+1N5242 zeners, 2N3904, five 10 kΩ resistors, two 150 Ω resistors, a 10 µF cap — the
+BOM of a passive pot-and-switch box with a one-transistor audio amp. The console holds no
+state; the state is on the [D+7A](D+7A.md).
