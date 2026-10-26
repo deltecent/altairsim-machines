@@ -7,13 +7,13 @@
 #
 # `BNKXIOS SPR  B200H  1900H` is the line of the loader's memory map for the Altair XIOS, which
 # only this disk holds. `0A>` is the prompt of MP/M II console 0. `Directory for User  0:` is
-# the heading of the DIR of MP/M II, and `A: ABORT    RSP` is a DIR line off the disk. `B: ABORT    PRL`
+# the heading of the DIR of MP/M II, and `A: MPM      SYS` is a DIR line off the disk: MPM.SYS is its first file. `B: ABORT    PRL`
 # and `BOOT     ASM` (on C:) are off MPMII_1.DSK and MPMII_2.DSK. MP/M II discards keys typed before its prompt, so
 # each line waits for the prompt (start_machine in lib.sh). The boot takes less than a second at full speed.
 set -u
 . "$(dirname "$0")/lib.sh"
 
-dirs=("MP/M II V2.1 Loader" "MP/M II V2.1" "0A>" "Directory for User  0:" "A: ABORT    RSP"
+dirs=("MP/M II V2.1 Loader" "MP/M II V2.1" "0A>" "Directory for User  0:" "A: MPM      SYS"
       "B: ABORT    PRL" "BOOT     ASM")
 want=("BNKXIOS SPR  B200H  1900H" "${dirs[@]}")
 

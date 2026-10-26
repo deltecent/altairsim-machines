@@ -6,9 +6,9 @@
 #
 # The server boots MP/M II with the CP/NET server, with no CP/M first. `SERVR0PRRSP` and `NtwrkIP0RSP` are the lines
 # of the loader's memory map for the two server processes. The requester boots CP/M 2.2, loads
-# CP/NET, and maps its drive B: to drive A: of the server. `B: BNKBDOS  SPR` is the first line of
-# DIR B:, and `SPOOL    RSP : MPM      SYS : MPMLDR   COM` ends the last line. Those files are on the
-# server disk only.
+# CP/NET, and maps its drive B: to drive A: of the server. DIR B: shows `B: MPM      SYS`, which
+# is on the server disk only. The commands on that disk have the system attribute, and DIR does
+# not show them.
 #
 # Each line waits for the prompt (start_machine in lib.sh), because MP/M II discards keys typed
 # before its prompt. The server must listen before the requester starts, as the README says.
@@ -18,7 +18,7 @@ set -u
 
 srv_want=("MP/M II V2.1 Loader" "SERVR0PRRSP  C100H  0A00H" "NtwrkIP0RSP  BD00H  0400H" "0A>")
 req_want=("CP/NET 1.2 Loader" "SNIOS   SPR  B600H  0300H" "CP/NET 1.2 loading complete."
-          "B: BNKBDOS  SPR" "SPOOL    RSP : MPM      SYS : MPMLDR   COM")
+          "B: MPM      SYS")
 
 net() {   # <cwd> <dir prefix of the machine files> [server machine file]
   start_machine srv 3 "$1" "$2${3:-server.toml}"
@@ -82,12 +82,16 @@ fi
 # stay the same as the files in ../mpm2/.
 mpm2="$root/examples/mpm2"
 bad=0
-for f in CPM22.DSK MPMII_1.DSK RESXIOS.ASM SS1XIOS.ASM LDRBIOS.ASM BOOT.ASM AFORMAT.ASM; do
+for f in CPM22.DSK RESXIOS.ASM SS1XIOS.ASM LDRBIOS.ASM BOOT.ASM AFORMAT.ASM; do
   if ! cmp -s "$dir/$f" "$mpm2/$f"; then
     echo "FAIL: cpnet/$f is not mpm2/$f" >&2
     bad=1
   fi
 done
+if ! diff -r -x .DS_Store "$dir/MPMII_1" "$mpm2/MPMII_1" > /dev/null; then
+  echo "FAIL: cpnet/MPMII_1/ is not mpm2/MPMII_1/" >&2
+  bad=1
+fi
 build_files=($(cpmls -f altair "$mpm2/BUILD.DSK" 2> /dev/null | grep -v '^0:$' | tr 'a-z' 'A-Z'))
 if [ "${#build_files[@]}" -eq 0 ] || ! disk_get "$mpm2/BUILD.DSK" "$work/mpm2-build" "${build_files[@]}"; then
   echo "FAIL: cannot read mpm2/BUILD.DSK" >&2

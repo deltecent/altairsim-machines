@@ -35,6 +35,13 @@
 ;	5) If a seek reaches track 0 before it has stepped out as far
 ;	   as curTrk says, the head was lower than curTrk. dSeek seeks
 ;	   again from track 0. (AFORMAT leaves the head on track 0.)
+;	6) The CP/M BIOS unloads the head in CONIN. Under MP/M II,
+;	   CONIN can run while another process is between two sectors
+;	   of a track. Here the tick unloads the head HDTIME ticks
+;	   after the last READ or WRITE, and the count stops while
+;	   READ or WRITE runs. As in the CP/M BIOS, the next READ or
+;	   WRITE after an unload reads the track again, so a disk
+;	   that was changed is read again.
 ;
 ;	The code assumes a 2 MHz 8080: the 88-DCDD byte loops and the
 ;	delay routine count cycles.
@@ -42,6 +49,8 @@
 ;	Revision history
 ;	1.0  23 October 2026  P. Linstruth
 ;	     First version
+;	1.1  25 October 2026  P. Linstruth
+;	     Unload the head 2 seconds after the last READ or WRITE
 ;
 false	equ	0
 true	equ	not false
@@ -392,6 +401,17 @@ inthnd:
 	mvi	a,viOn+rtcOn
 	out	vicmd		; and let it set again
 
+	lxi	h,hdTmr
+	mov	a,m
+	ora	a		; head unload count running?
+	jz	nohdun
+	dcr	m
+	jnz	nohdun
+	mvi	a,cHDUNLD	; HDTIME ticks with no disk I/O:
+	out	DRVCMD		;  unload the head
+	mvi	a,0ffh
+	sta	hdOff
+nohdun:
 	lda	tickn
 	ora	a		; test tickn, indicates
 				;  delayed process(es)
@@ -508,6 +528,9 @@ UNDEF	equ	0FFh		;undefined value
 
 fWRTVFY	equ	40h		;MODE bit: read back each sector written
 
+HDTIME	equ	120		;ticks without READ or WRITE before the
+				;   tick unloads the head (2 seconds)
+
 ;----------------------------------------------------------------------------
 ; home - Home BIOS entry. Set trkNum to zero. No drive activity takes place.
 ;----------------------------------------------------------------------------
@@ -615,12 +638,15 @@ secTran:
 ;    A=0 if successful, A=1 if not
 ;    Clobbers all
 ;----------------------------------------------------------------------------
-read:	call	readTrk		;fill track buffer if needed
+read:	call	dBegin		;no head unload while the disk is in use
+	call	readTrk		;fill track buffer if needed
 	jnz	exitDio		;track read error, exit
 
 	call	movRead		;move sector to (dmaAddr)
 
 exitDio:
+	mvi	a,HDTIME	;unload the head after HDTIME idle ticks
+	sta	hdTmr
 	mvi	a,0		;if zero is true, return zero
 	rz
 
@@ -636,7 +662,8 @@ exitDio:
 ;    A=0 if successful, A=1 if not
 ;    Clobbers all
 ;----------------------------------------------------------------------------
-write:	call	readTrk		;fill track buffer if needed
+write:	call	dBegin		;no head unload while the disk is in use
+	call	readTrk		;fill track buffer if needed
 	jnz	exitDio		;track read error, exit
 
 	call	dSelDrv		;the drive may not be selected
@@ -645,6 +672,23 @@ write:	call	readTrk		;fill track buffer if needed
 	call	movWrt		;move (dmaAddr) to sector in trkBuf
 	call	wrtSec		;and write that sector to the disk
 	jmp	exitDio
+
+;----------------------------------------------------------------------------
+; dBegin - Stop the head unload count. If the tick unloaded the head
+;    since the last READ or WRITE, forget the track buffer. The track
+;    is then read again, and dSelDrv loads the head.
+;    Clobbers A,H,L
+;----------------------------------------------------------------------------
+dBegin:	xra	a		;stop the head unload count
+	sta	hdTmr
+	lxi	h,hdOff		;head unloaded by the tick?
+	cmp	m
+	rz			;no
+
+	mov	m,a		;yes, clear hdOff
+	mvi	a,UNDEF		;and invalidate the track buffer
+	sta	bfDrive
+	ret
 
 ;----------------------------------------------------------------------------
 ; movRead - Move sector data from track buffer to (dmaAddr) for a
@@ -1589,6 +1633,8 @@ svdsp:	dw	0	; saved SP during int hndl
 svdret:	dw	0	; saved return during int hndl
 tickn:	db	0	; ticking boolean,true = delayed
 preemp:	db	0	; preempted boolean
+hdTmr:	db	HDTIME	; ticks to the head unload, 0 = stopped
+hdOff:	db	0	; true = the tick unloaded the head
 
 ;----------------------------------------------------------------------------
 ; Non-initialized data
