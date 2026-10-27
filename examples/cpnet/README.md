@@ -596,8 +596,8 @@ A build from the same disks gives the same bytes:
 
 | Disk | SHA-256 |
 |---|---|
-| `server.dsk` | `388dc29f…873dab7f` |
-| `server-ss1.dsk` | `59804882…ec2a0e27` |
+| `server.dsk` | `e863c192…72778cf2` |
+| `server-ss1.dsk` | `4a9cbeab…9967885e` |
 | `requester.dsk` | `d4f79db5…f206eed1` |
 
 The builds use the sources on `SRVBUILD.DSK` and `REQBUILD.DSK`, not the `.ASM` files of this

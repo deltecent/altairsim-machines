@@ -74,14 +74,14 @@ DISK1_TYPES = ("PRL", "COM")
 # (2SIO ports A and B). No banks, no Z80. RST 6 for the MP/M debugger: RST 5 is the RTC.
 # No SPOOL, because the machine has no printer, and no SCHED.
 #
-# The memory segments: the first entry is the operating system, from 7600h, and GENSYS
-# gives it. The two user segments share 0000h-75FFh equally, 3Bh pages each, one for
+# The memory segments: the first entry is the operating system, from 7500h, and GENSYS
+# gives it. The two user segments are 3Ah pages each, 0000h-39FFh and 3A00h-73FFh, one for
 # each console. PIP.PRL needs 32h pages with its buffers, so either console can run PIP
 # while the other console runs a command. A .COM file runs only in the segment at 0000h.
-# SDIR.PRL needs 4Dh pages and does not fit in a segment.
+# SDIR.PRL needs 4Dh pages and does not fit in a segment. The page at 7400h is not used.
 #
 # SS1XIOS is one page longer than RESXIOS (it reads the clock), so the operating system
-# starts at 7500h and each user segment is 3Ah pages (SEGMENTS).
+# starts at 7400h. The user segments are the same (SEGMENTS).
 GENSYS_ANSWERS = [
     (r"Use SYSTEM\.DAT for defaults", "N"),
     (r"Top page of operating system", "FE"),
@@ -110,7 +110,7 @@ GENSYS_ANSWERS = [
     (r"Accept new memory segment table entries", "Y"),
 ]
 SEGMENTS = {
-    "RESXIOS": ["", "00,3B,00", "3B,3B,00"],
+    "RESXIOS": ["", "00,3A,00", "3A,3A,00"],
     "SS1XIOS": ["", "00,3A,00", "3A,3A,00"],
 }
 

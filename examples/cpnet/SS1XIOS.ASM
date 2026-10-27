@@ -26,7 +26,10 @@
 ;	   a directory check, so a deferred track flush on console input
 ;	   (as in the CP/M BIOS) is not allowed. WRITE puts the sector
 ;	   into the track buffer and writes that one sector at once,
-;	   then reads it back if fWRTVFY is set in MODE.
+;	   then reads it back if fWRTVFY is set in MODE. MODE starts
+;	   with fWRTVFY clear. A read back waits one turn of the
+;	   disk for each sector, and more than doubles the time of
+;	   a write.
 ;	2) Interrupts are disabled only while one sector passes under
 ;	   the head. Between sectors they are enabled, so the tick
 ;	   waits at most one sector time (5.2 ms).
@@ -55,6 +58,8 @@
 ;	     First version
 ;	1.1  25 October 2026  P. Linstruth
 ;	     Unload the head 2 seconds after the last READ or WRITE
+;	1.2  26 October 2026  P. Linstruth
+;	     Write verify off by default
 ;
 false	equ	0
 true	equ	not false
@@ -1762,7 +1767,7 @@ dWrDone:
 ;
 ;******************************************************************************
 
-mode:	db	fWRTVFY		;default mode byte, write verify on
+mode:	db	0		;default mode byte, write verify off
 selTime:
 	db	7		;drive select timeout in seconds
 

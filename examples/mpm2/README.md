@@ -72,9 +72,9 @@ Breakpoint RST #    =  6
 Memory Segment Table:
 SYSTEM  DAT  FE00H  0100H
 ...
-MP/M II Sys  7600H  8A00H
-Memseg  Usr  0000H  3B00H
-Memseg  Usr  3B00H  3B00H
+MP/M II Sys  7500H  8B00H
+Memseg  Usr  0000H  3A00H
+Memseg  Usr  3A00H  3A00H
 
 MP/M II V2.1
 Copyright (C) 1982, Digital Research
@@ -110,7 +110,7 @@ then. At the monitor, `MOUNT dsk0:drive0` changes the disk in A:.
 | `sio0` | Port B connected to `telnet:8820`, for console 1. |
 | `vi0` | An 88-VI/RTC. The RTC counts the 60 Hz line, divides by 1, and interrupts on VI5. |
 
-GENSYS gives the user memory two segments of about 15K each, 0000h–3AFFh and 3B00h–75FFh.
+GENSYS gives the user memory two segments of 14.5K each, 0000h–39FFh and 3A00h–73FFh.
 Each console can run PIP, ED or ASM while the other console runs a command. A `.COM` file runs
 only in the segment at 0000h. SDIR needs 19K, so SDIR does not load. Use DIR.
 
@@ -134,6 +134,22 @@ The 88-DCDD keeps the head of a drive loaded until the software unloads it. The 
 unloads the head when it waits for a key. Under MP/M II, a console can wait for a key while the
 other console reads the disk. Because of that, the tick of the XIOS unloads the head 2 seconds
 after the last `READ` or `WRITE`.
+
+The XIOS does not read back the sectors that it writes. A read back waits one turn of the disk
+for each 128-byte sector. To read back each sector, change `db 0` to `db fWRTVFY` on the
+`mode:` line of the XIOS, and build the disk again.
+
+`WRITE` does not read the track before it writes a sector. If the track is in the track buffer
+of the XIOS, `WRITE` puts the sector there too. If not, the buffer keeps the track that was read
+last. After a seek, `WRITE` reads one sector and checks the track number in it before it writes.
+
+In the simulator at 2 MHz, `PIP D:=A:MPM.SYS` copied the 32K `MPM.SYS` in these times:
+
+| XIOS | Time |
+|---|---|
+| Read back, and a track read before a write to a track that is not in the buffer | 82 s |
+| No read back, and the track read | 36 s |
+| No read back, and no track read (this XIOS) | 28 s |
 
 `AFORMAT.ASM` is AFORMAT 1.11 of Martin Eberhard, from
 <https://deramp.com/downloads/mfe_archive/010-S100%20Computers%20and%20Boards/00-MITS/41-Martins%20Altair%20Software/AFORMAT/>.
@@ -252,13 +268,13 @@ and one second of `TOD`.
 - `SYSTEMINIT` reads the MSM5832 clock and sets the date and time of MP/M II. In the simulator,
   the clock reads the time of the host.
 
-`SS1XIOS.ASM` is one page longer than `RESXIOS.ASM`. The operating system starts at 7500h, and
-each console has a segment of 3Ah pages, 0000h–39FFh and 3A00h–73FFh.
+`SS1XIOS.ASM` is one page longer than `RESXIOS.ASM`. The operating system starts at 7400h. The
+user segments are the same, 3Ah pages for each console, 0000h–39FFh and 3A00h–73FFh.
 
 This boot and these commands ran through `altairsim --mcp` on 2026-10-22:
 
 ```
-MP/M II Sys  7500H  8B00H
+MP/M II Sys  7400H  8C00H
 Memseg  Usr  0000H  3A00H
 Memseg  Usr  3A00H  3A00H
 
@@ -523,14 +539,14 @@ Steps 5 to 8 are section 1.2 of the guide.
 | `MPMSTAT RSP (N) ?` | `Y` |
 | `SCHED   RSP (N) ?` | `N` |
 | `SPOOL   RSP (N) ?` | `N` |
-| `Base,size,attrib (76,8A,80) ?` | Press `RETURN` |
-| `Base,size,attrib (00,C0,00) ?`, the first time | `00,3B,00` |
-| `Base,size,attrib (00,C0,00) ?`, the second time | `3B,3B,00` |
+| `Base,size,attrib (75,8B,80) ?` | Press `RETURN` |
+| `Base,size,attrib (00,C0,00) ?`, the first time | `00,3A,00` |
+| `Base,size,attrib (00,C0,00) ?`, the second time | `3A,3A,00` |
 | `Accept new memory segment table entries (Y) ?` | `Y` |
 
 The top page is FE, because the DBL PROM is at FF00h. MP/M II takes RST 6 for its debugger,
 because RST 5 is the tick of the 88-VI/RTC. The machine has no printer, so SPOOL is not added.
-"The machine" says why the user memory has two segments of 3Bh pages.
+"The machine" says why the user memory has two segments of 3Ah pages.
 
 ### Make AFORMAT.COM
 
@@ -622,7 +638,6 @@ The steps are the same, with these changes:
 2. Type `A:RMAC SS1XIOS $PZ SZ`, not `A:RMAC RESXIOS $PZ SZ`.
 3. Type `A:LINK RESXIOS=SS1XIOS[OS]`, not `A:LINK RESXIOS[OS]`. GENSYS reads the XIOS from
    `RESXIOS.SPR`.
-4. In GENSYS, give `00,3A,00` and `3A,3A,00` for the two user segments.
 
 ### Boot the new disk
 
@@ -676,8 +691,8 @@ After you change a source on `BUILD.DSK` with ED, copy it back with `A:W RESXIOS
 `B>` prompt.
 
 The script prints each step and the memory map that GENSYS makes. A build from the same disks
-gives the same bytes. The SHA-256 of `MPM2.DSK` is `6452077b…55780965`, and the SHA-256 of
-`MPM2SS1.DSK` is `eb1d2059…ad1109e8`.
+gives the same bytes. The SHA-256 of `MPM2.DSK` is `35a2afb7…d4b2ad96`, and the SHA-256 of
+`MPM2SS1.DSK` is `2676bca4…d25aaca2`.
 
 ## Read more
 
