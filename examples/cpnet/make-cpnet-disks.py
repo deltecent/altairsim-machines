@@ -26,8 +26,8 @@
 #      SRVBUILD.DSK on B:. On B:, RMAC and LINK make RESXIOS.SPR (from the XIOS source)
 #      and NETWRKIF.RSP. ERA *.REL and ERA *.SYM make room on B:. ASM makes LDRBIOS.HEX,
 #      and DDT puts it into MPMLDR.COM. ASM makes BOOT.HEX, the cold start loader. GENSYS
-#      makes MPM.SYS. Its answers are in GENSYS_ANSWERS below. ASM and LOAD make
-#      AFORMAT.COM. PIP copies the new files to A:.
+#      makes MPM.SYS. Its answers are in GENSYS_ANSWERS below. ERA RESXIOS.SPR makes room
+#      on B:, and ASM and LOAD make AFORMAT.COM. PIP copies the new files to A:.
 #   2. A blank disk takes the place of SRVBUILD.DSK on B:, and AFORMAT formats it. PIP
 #      copies MPM.SYS first, so that it is at the front of the disk. R copies the commands
 #      of DRI disk 1 (the .PRL and .COM files) from MPMII_1/ to it. PIP copies MPMLDR.COM,
@@ -313,6 +313,9 @@ def build_server(work, xios):
         check_assembly(g.run("\r\nB>", "A:ASM BOOT.BBZ\r", timeout_ms=600000), "ASM BOOT")
 
         gensys(g, GENSYS_ANSWERS)
+        # GENSYS has put the XIOS in MPM.SYS, and B: needs the space of RESXIOS.SPR for
+        # AFORMAT.COM.
+        g.run("\r\nB>", "ERA RESXIOS.SPR\r")
 
         check_assembly(g.run("\r\nB>", "A:ASM AFORMAT.BBZ\r", timeout_ms=600000),
                        "ASM AFORMAT")

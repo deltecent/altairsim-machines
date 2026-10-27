@@ -20,21 +20,19 @@
 ;	1) Every write goes to the disk before WRITE returns. MP/M II
 ;	   asks for a non-deferred write (type 1 or 3) on a drive with
 ;	   a directory check, so a deferred track flush on console input
-;	   (as in the CP/M BIOS) is not allowed. WRITE puts the sector
-;	   into the track buffer and writes that one sector at once,
-;	   then reads it back if fWRTVFY is set in MODE. MODE starts
-;	   with fWRTVFY clear. A read back waits one turn of the
-;	   disk for each sector, and more than doubles the time of
-;	   a write.
+;	   (as in the CP/M BIOS) is not allowed. WRITE writes that one
+;	   sector at once, then reads it back if fWRTVFY is set in
+;	   MODE. MODE starts with fWRTVFY clear. A read back waits one
+;	   turn of the disk for each sector, and more than doubles the
+;	   time of a write.
 ;	2) Interrupts are disabled only while one sector passes under
 ;	   the head. Between sectors they are enabled, so the RTC tick
 ;	   waits at most one sector time (5.2 ms).
 ;	3) The track buffer is forgotten on the first select of a drive
 ;	   after a disk reset (SELDSK with E bit 0 = 0).
-;	4) WRITE selects the drive again before it writes a sector
-;	   of a track that is already in the buffer. A program such
-;	   as AFORMAT drives the controller itself, and can leave a
-;	   different drive selected, or none.
+;	4) WRITE selects the drive again before each write. A program
+;	   such as AFORMAT drives the controller itself, and can leave
+;	   a different drive selected, or none.
 ;	5) If a seek reaches track 0 before it has stepped out as far
 ;	   as curTrk says, the head was lower than curTrk. dSeek seeks
 ;	   again from track 0. (AFORMAT leaves the head on track 0.)
@@ -42,9 +40,15 @@
 ;	   CONIN can run while another process is between two sectors
 ;	   of a track. Here the tick unloads the head HDTIME ticks
 ;	   after the last READ or WRITE, and the count stops while
-;	   READ or WRITE runs. As in the CP/M BIOS, the next READ or
-;	   WRITE after an unload reads the track again, so a disk
-;	   that was changed is read again.
+;	   READ or WRITE runs. As in the CP/M BIOS, the track buffer
+;	   is forgotten after an unload, so a disk that was changed
+;	   is read again.
+;	7) WRITE does not read the track before it writes a sector.
+;	   If the track is in the track buffer, WRITE puts the sector
+;	   there too. If not, WRITE makes the sector in secBuf and
+;	   leaves the track buffer as it is. After a seek, a head
+;	   unload or a disk reset, WRITE reads one sector of the
+;	   track and checks its track number before it writes.
 ;
 ;	The code assumes a 2 MHz 8080: the 88-DCDD byte loops and the
 ;	delay routine count cycles.
@@ -56,6 +60,8 @@
 ;	     Unload the head 2 seconds after the last READ or WRITE
 ;	1.2  26 October 2026  P. Linstruth
 ;	     Write verify off by default
+;	1.3  26 October 2026  P. Linstruth
+;	     Write a sector without reading its track first
 ;
 false	equ	0
 true	equ	not false
@@ -572,9 +578,15 @@ selDsk:	lxi	h,0		;init HL=0 for invalid drive request
 	lxi	h,bfDrive	;HL->drive in the track buffer
 	mov	a,c
 	cmp	m		;the drive being logged in?
-	jnz	sdDph		;no
+	jnz	sdHead		;no
 
 	mvi	m,UNDEF		;yes, the disk may have changed: forget it
+
+sdHead:	lxi	h,okDrive	;HL->drive with the head checked
+	cmp	m		;the drive being logged in?
+	jnz	sdDph		;no
+
+	mvi	m,UNDEF		;yes, check the track again
 
 sdDph:	mov	a,c		;compute disk parameter header address
 	rlc			;   as (16*drvNum) + dpHead
@@ -661,20 +673,47 @@ exitDio:
 ;----------------------------------------------------------------------------
 ; write - Write sector BIOS entry. Write one sector using the drvNum,
 ;    trkNum, secNum and dmaAddr specified. The sector is written to the
-;    disk before the return, whatever the write type in C.
+;    disk before the return, whatever the write type in C. The track is
+;    not read first. If the track is in trkBuf, the sector is put there
+;    too. If not, the sector is made in secBuf, and trkBuf is unchanged.
 ;
 ; On Exit
 ;    A=0 if successful, A=1 if not
 ;    Clobbers all
 ;----------------------------------------------------------------------------
 write:	call	dBegin		;no head unload while the disk is in use
-	call	readTrk		;fill track buffer if needed
-	jnz	exitDio		;track read error, exit
-
 	call	dSelDrv		;the drive may not be selected
 	jnz	exitDio		;drive select failed, exit
 
+	call	wrSeek		;seek to trkNum, check the track if needed
+	jnz	exitDio		;not on trkNum, exit
+
+	lhld	bfDrive		;L=buffered drive, H=buffered track
+	lda	drvNum		;A=requested drive
+	cmp	l		;same drive buffered?
+	jnz	wrDirct		;no, write from secBuf
+
+	lda	trkNum		;A=requested track
+	cmp	h		;same track buffered?
+	jnz	wrDirct		;no, write from secBuf
+
+	call	altSkew		;secNum to hard sector in A
+	call	dSecAdr		;HL->sector in trkBuf
+	push	h
 	call	movWrt		;move (dmaAddr) to sector in trkBuf
+	pop	h
+	call	wrtSec		;and write that sector to the disk
+	jz	exitDio		;written
+
+	mvi	a,UNDEF		;the disk may not match trkBuf: forget it
+	sta	bfDrive
+	ora	a		;exit with non-zero
+	jmp	exitDio
+
+wrDirct:
+	lxi	h,secBuf	;HL->sector buffer
+	call	movWrt		;move (dmaAddr) to sector in secBuf
+	lxi	h,secBuf
 	call	wrtSec		;and write that sector to the disk
 	jmp	exitDio
 
@@ -693,6 +732,7 @@ dBegin:	xra	a		;stop the head unload count
 	mov	m,a		;yes, clear hdOff
 	mvi	a,UNDEF		;and invalidate the track buffer
 	sta	bfDrive
+	sta	okDrive		;check the track before the next write
 	ret
 
 ;----------------------------------------------------------------------------
@@ -736,17 +776,17 @@ mrLoop:	ldax	d		;move sector from trkBuf to (dmaAddr)
 	ret			;exit with zero	status
 
 ;----------------------------------------------------------------------------
-; movWrt - Move sector data from (dmaAddr) to track buffer and create
+; movWrt - Move sector data from (dmaAddr) to a sector buffer and create
 ;    metadata for the sector for a CPM write request.
 ;
+; On Entry
+;    HL->sector in trkBuf, or secBuf
+;
 ; On Exit
-;    Sector data moved to trkBuf from (dmaAddr)
+;    Sector data moved to (HL) from (dmaAddr)
 ;    Clobbers all
 ;----------------------------------------------------------------------------
-movWrt:	call	altSkew		;secNum to hard sector in A
-	call	dSecAdr		;HL->sector in trkBuf
-
-	mvi	m,0		;flag sector as good
+movWrt:	mvi	m,0		;flag sector as good
 
 	inx	h		;HL->track
 	lda	trkNum		;A=track
@@ -810,7 +850,7 @@ wDatTrk:
 ;   of a CPM write command. Compute checksum on all bytes moved and return
 ;   the checksum in B.
 ;------------------------------------------------------------------------------
-mwMove:	xchg			;DE->destination CPM sector in trkBuf
+mwMove:	xchg			;DE->destination CPM sector
 	lhld	dmaAddr		;HL->source buffer
 	lxi	b,CSECLEN	;B=checksum (0), C=128 byte count
 
@@ -883,6 +923,7 @@ readTrk:
 
 rtNew:	mvi	a,UNDEF		;invalidate buffered data
 	sta	bfDrive
+	sta	okDrive		;the head moves: check before a write
 
 	call	dSelDrv		;select drive, load head
 	rnz			;drive select failed, exit with error
@@ -971,20 +1012,94 @@ itLoop:	mov	m,b		;mark sector as bad (not read)
 	ret
 
 ;----------------------------------------------------------------------------
-; wrtSec - Write the sector for trkNum/secNum from trkBuf to the disk.
-;    The drive is selected and on trkNum (readTrk was just called).
-;    If fWRTVFY is set in MODE, read the sector back on the next turn
-;    and compare it with trkBuf. Try WRTRIES times.
+; wrSeek - Seek to trkNum for a write. Then read the next sector that
+;    passes, and check the track number in it. This is not needed if
+;    okDrive and okTrack are drvNum and trkNum: the head was checked
+;    there, and has not moved since. If no sector of trkNum is read in
+;    RDTRIES revolutions, restore to track zero and seek again, as
+;    readTrk does. The sector is read into secBuf.
 ;
-;    The sector slot is found by the low byte of its trkBuf address.
-;    TSECLEN (137) is odd, so the 32 slots have 32 different low bytes.
+; On Entry
+;    Drive selected and head loaded
+;
+; On Exit
+;    Zero true if the head is on trkNum, zero false otherwise
+;    Interrupts enabled
+;    Clobbers all
+;----------------------------------------------------------------------------
+wrSeek:	lhld	okDrive		;L=checked drive, H=checked track
+
+	lda	drvNum		;A=requested drive
+	cmp	l		;same drive checked?
+	jnz	wkNew		;no
+
+	lda	trkNum		;A=requested track
+	cmp	h		;same track checked?
+	rz			;yes, the head is still there
+
+wkNew:	mvi	a,UNDEF		;the head may move
+	sta	okDrive
+
+	mvi	a,2		;init restore/seek try counter
+	sta	skRetry
+
+wkRtry:	call	dSeek		;seek to trkNum
+	rnz			;a restore was required and failed
+
+	mvi	d,RDTRIES*NUMSEC
+				;D=max sector reads = RDTRIES revolutions
+
+wkLoop:	di			;no interrupt inside a sector
+	call	dNxtSec		;wait for next sector
+	jz	wkTmo		;no sector pulse
+
+	lxi	h,secBuf+1	;HL->1st read location in secBuf
+	call	dRead		;read the sector, check the track
+	ei
+	jz	wkOk		;a good sector of trkNum
+
+	dcr	d		;decrement total sectors counter
+	jnz	wkLoop		;go read next sector
+
+	lxi	h,skRetry	;HL->seek retry counter
+	dcr	m		;decrement the counter
+	jz	wkErr		;re-seek done, the track is not there
+
+	call	dRestor		;restore to track zero
+	jz	wkRtry		;start over after the re-seek
+
+	ret			;else, exit with error
+
+wkTmo:	ei
+wkErr:	ori	1		;exit with non-zero
+	ret
+
+wkOk:	lhld	drvNum		;L=drvNum, H=trkNum
+	shld	okDrive		;the head is checked there
+	ret			;exit with Z flag true
+
+;----------------------------------------------------------------------------
+; wrtSec - Write the sector for trkNum/secNum from (HL) to the disk.
+;    The drive is selected and on trkNum (wrSeek was just called).
+;    If fWRTVFY is set in MODE, read the sector back on the next turn
+;    and compare it with (HL). Try WRTRIES times.
+;
+;    The sector to write is found by the low byte of its slot address
+;    in trkBuf. TSECLEN (137) is odd, so the 32 slots have 32 different
+;    low bytes.
+;
+; On Entry
+;    HL->sector in trkBuf, or secBuf
 ;
 ; On Exit
 ;    Zero true for success, zero false for error
 ;    Interrupts enabled
 ;    Clobbers all
 ;----------------------------------------------------------------------------
-wrtSec:	call	altSkew		;A=hard sector to write
+wrtSec:	inx	h		;HL->1st byte to write
+	shld	wrBuf
+
+	call	altSkew		;A=hard sector to write
 	call	dSecAdr		;HL->its slot in trkBuf
 	mov	a,l
 	sta	wrSlot		;the low byte names the slot
@@ -1012,7 +1127,7 @@ wsHunt:	di			;no interrupt inside a sector
 	mov	a,e		;(5) issue write command to drive
 	out	DRVCMD		;(10) at 120 cycles 60us
 
-	inx	h		;point to 1st byte of sector
+	lhld	wrBuf		;HL->1st byte of sector
 	call	dWrite		;write the sector
 
 	mvi	a,6		;delay 600us for tunnel trim erase
@@ -1044,7 +1159,7 @@ wvHunt:	di			;no interrupt inside a sector
 	cmp	l
 	jnz	wvNext		;no
 
-	inx	h		;point to 1st byte of sector
+	lhld	wrBuf		;HL->1st byte of sector
 	call	dVerify		;verify the sector
 	ei
 	rz			;it matched, exit with zero
@@ -1059,8 +1174,8 @@ wsAgain:
 	dcr	m
 	jnz	wsRtry		;retry starting with the write
 
-wsErr:	mvi	a,UNDEF		;the disk may not match trkBuf: forget it
-	sta	bfDrive
+wsErr:	mvi	a,UNDEF		;check the track before the next write
+	sta	okDrive
 	ora	a		;exit with non-zero
 	ret
 
@@ -1625,6 +1740,10 @@ bfDrive:
 	db	UNDEF		;drive currently in track buffer
 bfTrack:
 	db	UNDEF		;currently buffered track (MUST follow bfDrive)
+okDrive:
+	db	UNDEF		;drive with the head checked on okTrack
+okTrack:
+	db	UNDEF		;track the head was checked on (MUST follow okDrive)
 
 cnt60:	db	60	; 60 tick cntr = 1 sec
 intstk:			; local intrpt stk
@@ -1650,6 +1769,7 @@ secNum:	ds	1		;sector number from CP/M call
 dmaAddr:
 	ds	2		;dma address for disk operations from CP/M call
 
+wrBuf:	ds	2		;HL->1st byte of the sector being written
 wrSlot:	ds	1		;low byte of the trkBuf slot being written
 wrRetry:
 	ds	1		;write retry counter
@@ -1675,6 +1795,12 @@ csv3:	ds	CKS
 ;    is good, non-zero if the sector is bad.
 ;-----------------------------------------------------------------------------
 trkBuf:	ds	NUMSEC*TSECLEN
+
+;-----------------------------------------------------------------------------
+; Sector buffer for a write to a track that is not in trkBuf, laid out
+;    as one sector of trkBuf
+;-----------------------------------------------------------------------------
+secBuf:	ds	TSECLEN
 
 	db	0	;force out last byte in hex file
 

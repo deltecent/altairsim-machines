@@ -132,7 +132,7 @@ The line is a `socket:` endpoint, because it passes each byte unchanged. Both ma
 processor at 2 MHz, because the timeouts of NETWRKIF and SNIOS are instruction loops. The
 server also has an 88-VI/RTC and RAM to FEFFh. Start one of the two servers, not both.
 
-The server has one console, on 2SIO port A, and one user segment, 0000h–68FFh. `MPMSTAT` on
+The server has one console, on 2SIO port A, and one user segment, 0000h–67FFh. `MPMSTAT` on
 the server shows the two network processes. `NtwrkIP0` waits for port B, and `SERVR0PR` waits
 for a message:
 
@@ -161,18 +161,18 @@ how to set a real board.
   until the next `EI`.
 - At boot, the XIOS reads the clock of the System Support 1 and sets the date and time of
   MP/M II.
-- The XIOS is one page longer. The user segment is 0000h–67FFh.
+- The XIOS is one page longer. The user segment is 0000h–66FFh.
 
 The requester is the same for the two servers. This boot of the server ran through
-`altairsim --mcp` on 2026-10-22:
+`altairsim --mcp` on 2026-10-27:
 
 ```
-BNKXIOS SPR  A300H  1A00H
-MP/M II Sys  6800H  9800H
-Memseg  Usr  0000H  6800H
+BNKXIOS SPR  A200H  1B00H
+MP/M II Sys  6700H  9900H
+Memseg  Usr  0000H  6700H
 ...
 0A>TOD
-Thu 10/22/<6 16:12:44
+Tue 10/27/<6 07:46:36
 ```
 
 `TOD` shows the year 2026 as `<6`. DRI's `TOD` prints two digits for the year, and counts the
@@ -359,7 +359,7 @@ you start `altairsim` from, here `~/cpnet-server`.
 
 The tools are on A:, and the files that they make go to B:. `$PZ SZ` for RMAC and `.BBZ` for
 ASM make no listing, so that every file fits on `SRVBUILD.DSK`. At the end of the build,
-`SRVBUILD.DSK` has 6K free, and 2K free for the System Support 1 server.
+`SRVBUILD.DSK` has 10K free, and 6K free for the System Support 1 server.
 
 1. Type `B:`.
 2. Type `A:RMAC RESXIOS $PZ SZ`. RMAC makes `RESXIOS.REL`.
@@ -413,22 +413,24 @@ Steps 10 to 13 are section 1.2 of the guide.
 | `SPOOL   RSP (N) ?` | `N` |
 | `SERVER  RSP (N) ?` | `Y` |
 | `NETWRKIFRSP (N) ?` | `Y` |
-| `Base,size,attrib (69,97,80) ?` | Press `RETURN` |
-| `Base,size,attrib (00,C0,00) ?` | `00,69,00` |
+| `Base,size,attrib (68,98,80) ?` | Press `RETURN` |
+| `Base,size,attrib (00,C0,00) ?` | `00,68,00` |
 | `Accept new memory segment table entries (Y) ?` | `Y` |
 
 The top page is FE, because the DBL PROM is at FF00h. The server has one TMP, because 2SIO
 port B is the network line. MP/M II takes RST 6 for its debugger, because RST 5 is the tick of
 the 88-VI/RTC. The machine has no printer, so SPOOL is not added.
 
-The two network RSPs make the operating system larger, so it starts at 6900h. Before the
-segment table, GENSYS prints the memory map. `CONSOLE DAT  6900H` is its lowest line. The one
-user segment takes all the memory below 6900h, 69h pages.
+The two network RSPs make the operating system larger, so it starts at 6800h. Before the
+segment table, GENSYS prints the memory map. `CONSOLE DAT  6800H` is its lowest line. The one
+user segment takes all the memory below 6800h, 68h pages.
 
 ### Make AFORMAT.COM
 
-1. Type `A:ASM AFORMAT.BBZ`. ASM makes `AFORMAT.HEX`.
-2. Type `A:LOAD AFORMAT`. LOAD makes `AFORMAT.COM`.
+1. Type `ERA RESXIOS.SPR`. GENSYS has put the XIOS in `MPM.SYS`, and B: needs the space
+   for `AFORMAT.COM`.
+2. Type `A:ASM AFORMAT.BBZ`. ASM makes `AFORMAT.HEX`.
+3. Type `A:LOAD AFORMAT`. LOAD makes `AFORMAT.COM`.
 
 ### Copy the new files to A:
 
@@ -515,7 +517,7 @@ The steps are the same, with these changes:
 2. Type `A:RMAC SS1XIOS $PZ SZ`, not `A:RMAC RESXIOS $PZ SZ`.
 3. Type `A:LINK RESXIOS=SS1XIOS[OS]`, not `A:LINK RESXIOS[OS]`. GENSYS reads the XIOS from
    `RESXIOS.SPR`.
-4. In GENSYS, give `00,68,00` for the user segment.
+4. In GENSYS, give `00,67,00` for the user segment.
 
 ### Boot the new server disk
 
@@ -596,8 +598,8 @@ A build from the same disks gives the same bytes:
 
 | Disk | SHA-256 |
 |---|---|
-| `server.dsk` | `e863c192…72778cf2` |
-| `server-ss1.dsk` | `4a9cbeab…9967885e` |
+| `server.dsk` | `48070801…3e691c12` |
+| `server-ss1.dsk` | `55733f03…227f6d19` |
 | `requester.dsk` | `d4f79db5…f206eed1` |
 
 The builds use the sources on `SRVBUILD.DSK` and `REQBUILD.DSK`, not the `.ASM` files of this
