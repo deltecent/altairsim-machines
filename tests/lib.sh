@@ -116,9 +116,10 @@ disk_get() {
 }
 
 # disk_has <label> <disk> <dir> <file>... -- each file on the 88-DCDD disk image must be the same
-# bytes as <dir>/<file>. cpmcp (cpmtools) reads the disk.
+# bytes as <dir>/<file>, up to Ctrl-Z bytes that fill its last record. R and PIP fill a text
+# file that way. cpmcp (cpmtools) reads the disk.
 disk_has() {
-  local label=$1 dsk=$2 dir=$3 f bad=0 got="$work/disk.$RANDOM"
+  local label=$1 dsk=$2 dir=$3 f n bad=0 got="$work/disk.$RANDOM"
   shift 3
   if ! command -v cpmcp > /dev/null; then
     echo "FAIL: $label: no cpmcp on PATH (install cpmtools)" >&2
@@ -129,7 +130,8 @@ disk_has() {
     if ! disk_get "$dsk" "$got" "$f"; then
       echo "FAIL: $label: $(basename "$dsk") has no $f" >&2
       bad=1
-    elif ! cmp -s "$dir/$f" "$got/$f"; then
+    elif n=$(wc -c < "$dir/$f"); ! head -c "$n" "$got/$f" | cmp -s "$dir/$f" - ||
+         [ -n "$(tail -c +$((n + 1)) "$got/$f" | tr -d '\032')" ]; then
       echo "FAIL: $label: $f on $(basename "$dsk") is not $dir/$f" >&2
       bad=1
     fi

@@ -54,6 +54,11 @@ The prompt shows the user number and the drive. MP/M II starts console 1 in user
 is user 1 on drive A:. A file that console 0 makes is in user 0. Type `USER 0` on console 1 to
 see it.
 
+The commands on A: have the system attribute, so that every user number can run them. `DIR`
+does not show them, and prints `System Files Exist`. Type `DIR [SYS]` to see them. The commands
+are also read-only. To erase or replace a command, first make it read-write. For example, type
+`SET PIP.PRL [RW]`.
+
 Type a command after the prompt comes back. While a program runs, MP/M II reads the keys that
 come in and discards them.
 
@@ -67,9 +72,9 @@ Breakpoint RST #    =  6
 Memory Segment Table:
 SYSTEM  DAT  FE00H  0100H
 ...
-MP/M II Sys  7600H  8A00H
-Memseg  Usr  0000H  3B00H
-Memseg  Usr  3B00H  3B00H
+MP/M II Sys  7500H  8B00H
+Memseg  Usr  0000H  3A00H
+Memseg  Usr  3A00H  3A00H
 
 MP/M II V2.1
 Copyright (C) 1982, Digital Research
@@ -105,7 +110,7 @@ then. At the monitor, `MOUNT dsk0:drive0` changes the disk in A:.
 | `sio0` | Port B connected to `telnet:8820`, for console 1. |
 | `vi0` | An 88-VI/RTC. The RTC counts the 60 Hz line, divides by 1, and interrupts on VI5. |
 
-GENSYS gives the user memory two segments of about 15K each, 0000h–3AFFh and 3B00h–75FFh.
+GENSYS gives the user memory two segments of 14.5K each, 0000h–39FFh and 3A00h–73FFh.
 Each console can run PIP, ED or ASM while the other console runs a command. A `.COM` file runs
 only in the segment at 0000h. SDIR needs 19K, so SDIR does not load. Use DIR.
 
@@ -124,6 +129,27 @@ starts from the cold boot loader of the Altair CP/M. Their 88-DCDD code comes fr
 CP/M 2.2b v2.3 BIOS and boot loader of Mike Douglas, for the Altair 8″ floppy. The comment at
 the top of each file lists what is different for MP/M. For example, each write of the XIOS goes
 to the disk before `WRITE` returns.
+
+The 88-DCDD keeps the head of a drive loaded until the software unloads it. The CP/M BIOS
+unloads the head when it waits for a key. Under MP/M II, a console can wait for a key while the
+other console reads the disk. Because of that, the tick of the XIOS unloads the head 2 seconds
+after the last `READ` or `WRITE`.
+
+The XIOS does not read back the sectors that it writes. A read back waits one turn of the disk
+for each 128-byte sector. To read back each sector, change `db 0` to `db fWRTVFY` on the
+`mode:` line of the XIOS, and build the disk again.
+
+`WRITE` does not read the track before it writes a sector. If the track is in the track buffer
+of the XIOS, `WRITE` puts the sector there too. If not, the buffer keeps the track that was read
+last. After a seek, `WRITE` reads one sector and checks the track number in it before it writes.
+
+In the simulator at 2 MHz, `PIP D:=A:MPM.SYS` copied the 32K `MPM.SYS` in these times:
+
+| XIOS | Time |
+|---|---|
+| Read back, and a track read before a write to a track that is not in the buffer | 82 s |
+| No read back, and the track read | 36 s |
+| No read back, and no track read (this XIOS) | 28 s |
 
 `AFORMAT.ASM` is AFORMAT 1.11 of Martin Eberhard, from
 <https://deramp.com/downloads/mfe_archive/010-S100%20Computers%20and%20Boards/00-MITS/41-Martins%20Altair%20Software/AFORMAT/>.
@@ -242,13 +268,13 @@ and one second of `TOD`.
 - `SYSTEMINIT` reads the MSM5832 clock and sets the date and time of MP/M II. In the simulator,
   the clock reads the time of the host.
 
-`SS1XIOS.ASM` is one page longer than `RESXIOS.ASM`. The operating system starts at 7500h, and
-each console has a segment of 3Ah pages, 0000h–39FFh and 3A00h–73FFh.
+`SS1XIOS.ASM` is one page longer than `RESXIOS.ASM`. The operating system starts at 7400h. The
+user segments are the same, 3Ah pages for each console, 0000h–39FFh and 3A00h–73FFh.
 
 This boot and these commands ran through `altairsim --mcp` on 2026-10-22:
 
 ```
-MP/M II Sys  7500H  8B00H
+MP/M II Sys  7400H  8C00H
 Memseg  Usr  0000H  3A00H
 Memseg  Usr  3A00H  3A00H
 
@@ -402,8 +428,13 @@ Both files come in `MPMIIOEM.ZIP` (SHA-256 `fdcd2294…77f64a67`). Patrick Linst
 on 2026-10-18. The same two images, byte for byte, are in
 <https://github.com/avwohl/mpm2/tree/main/mpm2_external>.
 
-Disk 1 has the operating system and the commands. `MPM2.DSK` holds every file of disk 1. Disk 2
-has the tools (`RMAC`, `LINK`) and DRI's sample sources for a new XIOS.
+Disk 1 has the operating system and the commands. Disk 2 has the tools (`RMAC`, `LINK`) and
+DRI's sample sources for a new XIOS.
+
+`MPM2.DSK` holds the commands of disk 1. They are the 32 `.PRL` and `.COM` files of Figure 1-1
+of the *MP/M II User's Guide*. The build makes the `MPMLDR.COM` of `MPM2.DSK`. The `.SPR`,
+`.RSP` and `.BRS` files of disk 1 are only for GENSYS, and GENSYS puts them into `MPM.SYS`.
+They are on `MPMII_1.DSK` and `BUILD.DSK`, not on `MPM2.DSK`.
 
 `MPMII_1.DSK` and `MPMII_2.DSK` hold the same files as `MPMII_1.IMD` and `MPMII_2.IMD`, on
 88-DCDD disks in the format of the Altair CP/M. `mpm2.toml` mounts them on B: and C:, so MP/M II
@@ -438,9 +469,14 @@ RAM, and these three disks:
 
 | Disk | What is on it |
 |---|---|
-| `CPM22.DSK` | The 56K CP/M 2.2b v2.3 of Mike Douglas for the 88-DCDD, from altairsim 1.3.4. It has PIP, ED, ASM, DDT, LOAD, STAT, SYSGEN and the other CP/M tools. It also has `AFORMAT.COM` 1.12, and `RMAC.COM` and `LINK.COM` from DRI disk 2. The games, `LS.COM`, and the host-bridge programs `R`, `W` and `HDIR` are removed. |
+| `CPM22.DSK` | The 56K CP/M 2.2b v2.3 of Mike Douglas for the 88-DCDD, from altairsim 1.3.4. It has PIP, ED, ASM, DDT, LOAD, STAT, SYSGEN and the other CP/M tools. It also has `AFORMAT.COM` 1.12, and `RMAC.COM` and `LINK.COM` from DRI disk 2. It has the XMODEM programs `PCGET` and `PCPUT`, and the host-bridge programs `R`, `W` and `HDIR`. The games and `LS.COM` are removed. |
 | `BUILD.DSK` | `RESXIOS.ASM`, `SS1XIOS.ASM`, `LDRBIOS.ASM`, `BOOT.ASM` and `AFORMAT.ASM`. From DRI disk 1: `GENSYS.COM`, `MPMLDR.COM`, and the `.SPR`, `.RSP` and `.BRS` files. |
-| A copy of `MPMII_1.DSK` | The new system disk. It has every file of DRI disk 1, and its system tracks are empty. |
+| A blank disk | The new system disk. AFORMAT formats it. |
+
+The build also copies the commands of DRI disk 1 to the new disk. They are the 32 `.PRL` and
+`.COM` files in the `MPMII_1` folder.
+In the simulator, `R` copies them from the host. On a real Altair, `PCGET` copies them from a
+host computer through a serial port.
 
 The build writes on all three disks. Use copies of them. On a real Altair, write each image to
 a disk. In the simulator, copy this folder and start the build machine:
@@ -448,11 +484,11 @@ a disk. In the simulator, copy this folder and start the build machine:
 ```
 cp -R examples/mpm2 ~/mpm2-build
 cd ~/mpm2-build
-cp MPMII_1.DSK NEW.DSK
 altairsim build.toml
 ```
 
-CP/M boots from `CPM22.DSK` in A:, with `BUILD.DSK` in B:.
+CP/M boots from `CPM22.DSK` in A:, with `BUILD.DSK` in B:. `R` and `W` see the folder that you
+start `altairsim` from, here `~/mpm2-build`.
 
 ### Assemble the XIOS and the loaders
 
@@ -503,14 +539,14 @@ Steps 5 to 8 are section 1.2 of the guide.
 | `MPMSTAT RSP (N) ?` | `Y` |
 | `SCHED   RSP (N) ?` | `N` |
 | `SPOOL   RSP (N) ?` | `N` |
-| `Base,size,attrib (76,8A,80) ?` | Press `RETURN` |
-| `Base,size,attrib (00,C0,00) ?`, the first time | `00,3B,00` |
-| `Base,size,attrib (00,C0,00) ?`, the second time | `3B,3B,00` |
+| `Base,size,attrib (75,8B,80) ?` | Press `RETURN` |
+| `Base,size,attrib (00,C0,00) ?`, the first time | `00,3A,00` |
+| `Base,size,attrib (00,C0,00) ?`, the second time | `3A,3A,00` |
 | `Accept new memory segment table entries (Y) ?` | `Y` |
 
 The top page is FE, because the DBL PROM is at FF00h. MP/M II takes RST 6 for its debugger,
 because RST 5 is the tick of the 88-VI/RTC. The machine has no printer, so SPOOL is not added.
-"The machine" says why the user memory has two segments of 3Bh pages.
+"The machine" says why the user memory has two segments of 3Ah pages.
 
 ### Make AFORMAT.COM
 
@@ -529,15 +565,40 @@ B: gets a different disk next, so the new files go to A: first.
 
 ### Make the new system disk
 
-1. Put the copy of `MPMII_1.DSK` in B:. In the simulator, press `Ctrl-E`, type
-   `MOUNT dsk0:drive1 NEW.DSK`, and type `RUN`.
-2. Press `Ctrl-C`. CP/M reads the directory of the new disk. Without `Ctrl-C`, CP/M does not
+`MPM.SYS` goes on the blank disk first. It then takes the first blocks after the directory,
+on tracks 3 to 11. At boot, `MPMLDR` reads the directory on track 2 and then `MPM.SYS`, so
+the head stays on tracks 2 to 11.
+
+1. Put the blank disk in B:. In the simulator, press `Ctrl-E`, type
+   `MOUNT dsk0:drive1 NEW.DSK CREATE`, and type `RUN`. `CREATE` makes an empty disk image.
+2. Type `AFORMAT B:`.
+3. At `Ready (Y/N)?`, type `Y`. AFORMAT formats the disk.
+4. At `Format another (Y/N)?`, type `N`.
+5. At `Put CP/M disk in A:`, type `Y`.
+6. Press `Ctrl-C`. CP/M reads the directory of the new disk. Without `Ctrl-C`, CP/M does not
    write on the new disk.
-3. Type `PIP B:=MPM.SYS[V]`.
-4. Type `PIP B:=MPMLDR.COM[V]`. The new `MPMLDR.COM` replaces the one of DRI.
-5. Type `PIP B:=AFORMAT.COM[V]`.
-6. Type `STAT B:*.PRL $SYS`. Each `.PRL` file gets the system attribute, so every user number
-   can run it.
+7. Type `PIP B:=MPM.SYS[V]`.
+8. Type `B:`. `R` and `PCGET` write to the current drive.
+9. Copy the commands of DRI disk 1 to B:. In the simulator, type these commands:
+
+   ```
+   A:R MPMII_1/*.PRL
+   A:R MPMII_1/*.COM
+   ```
+
+   Do not type `A:R MPMII_1/*.*`, because that also copies `MPMII_1.IMD` and the files for
+   GENSYS. On a real Altair, copy each `.PRL` and `.COM` file with `A:PCGET`.
+10. Type `A:`.
+11. Type `PIP B:=MPMLDR.COM[V]`. The new `MPMLDR.COM` replaces the one of DRI.
+12. Type `PIP B:=AFORMAT.COM[V]`.
+13. Type `STAT B:*.PRL $R/O`.
+14. Type `STAT B:*.PRL $SYS`.
+15. Type `STAT B:*.COM $R/O`.
+16. Type `STAT B:*.COM $SYS`.
+
+Each command on B: is now read-only and has the system attribute, so every user number can run
+it. Section 7.6 of the *MP/M II User's Guide* gives this setting. CP/M STAT sets one attribute
+at a time.
 
 ### Write the system tracks
 
@@ -577,7 +638,6 @@ The steps are the same, with these changes:
 2. Type `A:RMAC SS1XIOS $PZ SZ`, not `A:RMAC RESXIOS $PZ SZ`.
 3. Type `A:LINK RESXIOS=SS1XIOS[OS]`, not `A:LINK RESXIOS[OS]`. GENSYS reads the XIOS from
    `RESXIOS.SPR`.
-4. In GENSYS, give `00,3A,00` and `3A,3A,00` for the two user segments.
 
 ### Boot the new disk
 
@@ -600,8 +660,10 @@ tracks.
 on copies of the disks of this folder. It checks what CP/M prints after each command. At the
 end, it checks the system tracks and `MPM.SYS` of the new disk, and boots the disk into MP/M II.
 
-The script needs Python 3, the `altairsim` on your PATH, and cpmtools with the `altair` disk
-format. It reads the new disk with `cpmcp`. The build of 2026-10-21 used altairsim 1.3.4.
+The script needs Python 3 and the `altairsim` on your PATH. Every disk step runs in CP/M.
+AFORMAT makes the blank disk, and `R` copies the commands of DRI disk 1. At the end, `W` copies
+`BOOT.HEX`, `MPMLDR.COM` and `MPM.SYS` to the host for the checks. The build of 2026-10-26
+used altairsim 1.3.5.
 
 Run the script from this folder, with the name of the new disk:
 
@@ -616,20 +678,21 @@ For the System Support 1 disk, add `--xios SS1XIOS`:
 ```
 
 The script builds from the sources on `BUILD.DSK`. The `.ASM` files of this folder are copies of
-them. After you change a source in
-this folder, put the new file on `BUILD.DSK`. For example, for `RESXIOS.ASM`:
+them. After you change a source in this folder, put the new file on `BUILD.DSK`. For example,
+for `RESXIOS.ASM`:
 
-```sh
-cpmrm -f altair BUILD.DSK 0:resxios.asm
-cpmcp -f altair BUILD.DSK RESXIOS.ASM 0:
-```
+1. In this folder, type `altairsim build.toml`. The machine mounts `CPM22.DSK` and
+   `BUILD.DSK` of this folder.
+2. Type `B:`.
+3. Type `A:R RESXIOS.ASM`. `R` replaces the old file.
+4. Press `Ctrl-E` and type `QUIT`.
 
-After you change a source on `BUILD.DSK` with ED, copy it back with `cpmcp -f altair BUILD.DSK
-0:resxios.asm RESXIOS.ASM`.
+After you change a source on `BUILD.DSK` with ED, copy it back with `A:W RESXIOS.ASM` at the
+`B>` prompt.
 
 The script prints each step and the memory map that GENSYS makes. A build from the same disks
-gives the same bytes. The SHA-256 of `MPM2.DSK` is `f31f5872…fca96172`, and the SHA-256 of
-`MPM2SS1.DSK` is `9a4853fc…67b55159`.
+gives the same bytes. The SHA-256 of `MPM2.DSK` is `35a2afb7…d4b2ad96`, and the SHA-256 of
+`MPM2SS1.DSK` is `2676bca4…d25aaca2`.
 
 ## Read more
 

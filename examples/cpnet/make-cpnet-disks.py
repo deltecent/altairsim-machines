@@ -14,8 +14,9 @@
 #
 # The script does the steps of "Build the server disk" and "Build the requester disk" in
 # README.md, with the disks of this folder. A person can do the same steps on an Altair with
-# two 8" drives. The script types each command and checks what CP/M prints. It reads the new
-# disks with cpmtools (cpmcp -f altair).
+# two 8" drives. The script types each command and checks what CP/M prints. Every disk step
+# runs in CP/M. R, W and HDIR on CPM22.DSK move files between the host and the disks, through
+# the host bridge (hb0) of the build machines. On a real Altair, PCGET and PCPUT do the same.
 #
 # The simulator is the altairsim on PATH, or the one that $ALTAIRSIM names.
 #
@@ -25,17 +26,24 @@
 #      SRVBUILD.DSK on B:. On B:, RMAC and LINK make RESXIOS.SPR (from the XIOS source)
 #      and NETWRKIF.RSP. ERA *.REL and ERA *.SYM make room on B:. ASM makes LDRBIOS.HEX,
 #      and DDT puts it into MPMLDR.COM. ASM makes BOOT.HEX, the cold start loader. GENSYS
-#      makes MPM.SYS. Its answers are in GENSYS_ANSWERS below. ASM and LOAD make
-#      AFORMAT.COM. PIP copies the new files to A:.
-#   2. A copy of MPMII_1.DSK takes the place of SRVBUILD.DSK on B:. PIP copies MPM.SYS,
-#      MPMLDR.COM and AFORMAT.COM to it. STAT gives the .PRL files the system attribute.
-#      DDT puts BOOT and MPMLDR.COM into the SYSGEN image at 0900h, and SYSGEN writes it to
-#      the system tracks of B: (section 1.5.1 of the MP/M II System Implementor's Guide).
-#   3. The system tracks of the new disk must hold BOOT and MPMLDR.COM, and its MPM.SYS
-#      must be the one on A:. The DBL PROM boots the disk into MP/M II.
+#      makes MPM.SYS. Its answers are in GENSYS_ANSWERS below. ERA RESXIOS.SPR makes room
+#      on B:, and ASM and LOAD make AFORMAT.COM. PIP copies the new files to A:.
+#   2. A blank disk takes the place of SRVBUILD.DSK on B:, and AFORMAT formats it. PIP
+#      copies MPM.SYS first, so that it is at the front of the disk. R copies the commands
+#      of DRI disk 1 (the .PRL and .COM files) from MPMII_1/ to it. PIP copies MPMLDR.COM,
+#      which replaces the one of DRI, and AFORMAT.COM. STAT makes the commands read-only
+#      and gives them the system attribute. DDT puts BOOT and MPMLDR.COM into the SYSGEN
+#      image at 0900h, and SYSGEN writes it to the system tracks of B: (section 1.5.1 of
+#      the MP/M II System Implementor's Guide).
+#   3. W copies BOOT.HEX, MPMLDR.COM and MPM.SYS of A:, and MPMLDR.COM and MPM.SYS of the
+#      new disk, to the work directory. The system tracks of the new disk must hold BOOT
+#      and MPMLDR.COM, and its MPM.SYS must be the one on A:. The DBL PROM boots the disk
+#      into MP/M II.
 #   4. The machine of reqbuild.toml boots a copy of CPM22.DSK on A:, with a copy of
 #      REQBUILD.DSK on B:. On B:, RMAC and LINK make SNIOS.SPR. PIP copies the .SPR and
-#      .COM files of B:, LOGIN.ASM and LOGOFF.ASM to A:, and A: is the requester disk.
+#      .COM files of B:, LOGIN.ASM and LOGOFF.ASM to A:, and A: is the requester disk. W
+#      copies each requester file of both disks to the work directory, and they must be
+#      the same.
 #
 # Exit status: 0 when both disks are written, 1 when a step fails. --keep keeps the work
 # directory, with the transcript of every session in it.
@@ -60,7 +68,11 @@ REQBUILD_TOML = os.path.join(SRC, "reqbuild.toml")
 CPM22_DSK = os.path.join(SRC, "CPM22.DSK")
 SRVBUILD_DSK = os.path.join(SRC, "SRVBUILD.DSK")
 REQBUILD_DSK = os.path.join(SRC, "REQBUILD.DSK")
-DISK1_DSK = os.path.join(SRC, "MPMII_1.DSK")
+DISK1 = os.path.join(SRC, "MPMII_1")
+# The commands of DRI disk 1 in MPMII_1/, by type: the 32 files of Figure 1-1 of the
+# MP/M II User's Guide. The .SPR, .RSP and .BRS files are only for GENSYS, which has
+# put them into MPM.SYS. The folder also holds MPMII_1.IMD.
+DISK1_TYPES = ("PRL", "COM")
 
 # The requester files of CP/NET on REQBUILD.DSK. PIP copies them to the requester disk. The
 # PIP of the CP/NET disk (PIP 1.5) takes the place of the PIP of the CP/M disk (PIP 1.6).
@@ -206,14 +218,17 @@ def check_assembly(text, what):
         raise BuildError("%s reported errors:\n%s" % (what, "\n".join(body)))
 
 
-def cpm_get(dsk, names, dest):
-    """Copy files off an 88-DCDD disk image with cpmtools."""
-    for n in names:
-        out = os.path.join(dest, n)
-        r = subprocess.run(["cpmcp", "-f", "altair", dsk, "0:" + n.lower(), out],
-                           capture_output=True, text=True)
-        if r.returncode or not os.path.isfile(out):
-            raise BuildError("%s is not on %s: %s" % (n, os.path.basename(dsk), r.stderr))
+def w_host(g, prompt, cpmfile, hostfile):
+    """Copy a file from a disk to the work directory with W."""
+    text = g.run(prompt, "A:W %s %s\r" % (cpmfile, hostfile), timeout_ms=600000)
+    if "records," not in text or re.search(r"cannot|no such|error", text, re.I):
+        raise BuildError("W %s failed:\n%s" % (cpmfile, text))
+
+
+def mount(g, drive, dsk, create=False):
+    text = g.mon('MOUNT dsk0:%s "%s"%s' % (drive, dsk, " CREATE" if create else ""))
+    if "mounted" not in text:
+        raise BuildError("MOUNT %s failed:\n%s" % (dsk, text))
 
 
 def check_link(text, what):
@@ -236,18 +251,33 @@ def build_server(work, xios):
     new = os.path.join(work, "server.dsk")
     shutil.copy(CPM22_DSK, a)
     shutil.copy(SRVBUILD_DSK, b)
-    shutil.copy(DISK1_DSK, new)
-    # SRVBUILD.DSK holds both XIOS sources. The build needs the space of the other one.
-    for other in VERIFY_TICK:
-        if other != xios:
-            subprocess.run(["cpmrm", "-f", "altair", b, "0:%s.asm" % other.lower()], check=True)
+    # The host bridge sees the work directory only. R reads the files of DRI disk 1 from
+    # MPMII_1/ in it, and W writes the files for step 3 to A/ and NEW/. The CCP makes the
+    # names upper case.
+    disk1 = os.path.join(work, "MPMII_1")
+    os.makedirs(disk1)
+    count = {}
+    for n in sorted(os.listdir(DISK1)):
+        t = n.rsplit(".", 1)[-1].upper()
+        if t in DISK1_TYPES:
+            shutil.copy(os.path.join(DISK1, n), disk1)
+            count[t] = count.get(t, 0) + 1
+    for d in ("A", "NEW"):
+        os.makedirs(os.path.join(work, d))
 
     g = Guest(SRVBUILD_TOML, os.path.join(work, "1-server.log"))
     try:
         g.mon("SET CONSOLE UPPER=OFF")
-        g.mon('MOUNT dsk0:drive0 "%s"' % a)
-        g.mon('MOUNT dsk0:drive1 "%s"' % b)
+        g.mon('SET hb0 hostdir="%s"' % work)
+        mount(g, "drive0", a)
+        mount(g, "drive1", b)
         g.run("\r\nA>", start=0xFF00)
+        # SRVBUILD.DSK holds both XIOS sources. The build needs the space of the other one.
+        for other in VERIFY_TICK:
+            if other != xios:
+                text = g.run("\r\nA>", "ERA B:%s.ASM\r" % other)
+                if "NO FILE" in text:
+                    raise BuildError("%s.ASM is not on SRVBUILD.DSK" % other)
         g.run("\r\nB>", "B:\r")
 
         # The tools are on A:, and the files they make go to B:. $PZ SZ: no listing and
@@ -283,6 +313,9 @@ def build_server(work, xios):
         check_assembly(g.run("\r\nB>", "A:ASM BOOT.BBZ\r", timeout_ms=600000), "ASM BOOT")
 
         gensys(g, GENSYS_ANSWERS)
+        # GENSYS has put the XIOS in MPM.SYS, and B: needs the space of RESXIOS.SPR for
+        # AFORMAT.COM.
+        g.run("\r\nB>", "ERA RESXIOS.SPR\r")
 
         check_assembly(g.run("\r\nB>", "A:ASM AFORMAT.BBZ\r", timeout_ms=600000),
                        "ASM AFORMAT")
@@ -293,16 +326,37 @@ def build_server(work, xios):
         for n in ("MPM.SYS", "MPMLDR.COM", "BOOT.HEX", "AFORMAT.COM"):
             pip(g, "\r\nB>", "A:PIP A:=%s[V]\r" % n)
 
-        # Step 2: the new disk takes the place of SRVBUILD.DSK. Ctrl-C makes CP/M log it in.
+        # Step 2: a blank disk takes the place of SRVBUILD.DSK, and AFORMAT formats it.
+        # Ctrl-C makes CP/M log it in.
         g.run("\r\nA>", "A:\r")
-        g.mon('MOUNT dsk0:drive1 "%s"' % new)
+        mount(g, "drive1", new, create=True)
+        g.run("Ready (Y/N)?", "AFORMAT B:\r")
+        text = g.run("Format another (Y/N)?", "Y", timeout_ms=600000)
+        if re.search(r"FAIL|Retry", text):
+            raise BuildError("AFORMAT B: failed:\n" + text)
+        g.run("Put CP/M disk in A:\r\nReady (Y/N)?", "N")
+        g.run("\r\nA>", "Y")
         g.run("\r\nA>", "\x03")
-        for n in ("MPM.SYS", "MPMLDR.COM", "AFORMAT.COM"):
+        # The commands of DRI disk 1 go on after MPM.SYS. The new MPMLDR.COM then replaces
+        # the one of DRI. R writes to the current drive.
+        pip(g, "\r\nA>", "PIP B:=MPM.SYS[V]\r")
+        g.run("\r\nB>", "B:\r")
+        for t in DISK1_TYPES:
+            text = g.run("\r\nB>", "A:R MPMII_1/*.%s\r" % t, timeout_ms=600000)
+            if text.count(" -> ") != count[t] or re.search(r"cannot|no such|error", text, re.I):
+                raise BuildError("R MPMII_1/*.%s failed:\n%s" % (t, text))
+        g.run("\r\nA>", "A:\r")
+        for n in ("MPMLDR.COM", "AFORMAT.COM"):
             pip(g, "\r\nA>", "PIP B:=%s[V]\r" % n)
         # A command in user 0 runs from every user only when it has the system attribute.
-        text = g.run("\r\nA>", "STAT B:*.PRL $SYS\r", timeout_ms=600000)
-        if text.count("set to SYS") < 20:
-            raise BuildError("STAT did not set the PRL files to $SYS:\n" + text)
+        # Section 7.6 of the MP/M II User's Guide also makes the commands read-only.
+        # AFORMAT.COM is one more .COM file.
+        for t, n in (("PRL", count["PRL"]), ("COM", count["COM"] + 1)):
+            for attr, said in (("$R/O", "set to R/O"), ("$SYS", "set to SYS")):
+                text = g.run("\r\nA>", "STAT B:*.%s %s\r" % (t, attr), timeout_ms=600000)
+                if text.count(said) != n:
+                    raise BuildError("STAT B:*.%s %s did not set %d files:\n%s"
+                                     % (t, attr, n, text))
 
         # Section 1.5.1 of the guide, for the SYSGEN of the Altair CP/M. Its image starts at
         # 0900h, one 128-byte sector after another from track 0 sector 0. The DBL PROM
@@ -319,10 +373,16 @@ def build_server(work, xios):
         g.run("\r\nA>", "\r")
         text = g.run("\r\nA>", "STAT B:\r")
         g.run("\r\nA>", "\r")
+
+        # Step 3 reads these files on the host.
+        for n in ("BOOT.HEX", "MPMLDR.COM", "MPM.SYS"):
+            w_host(g, "\r\nA>", "A:" + n, "A/" + n)
+        for n in ("MPMLDR.COM", "MPM.SYS"):
+            w_host(g, "\r\nA>", "B:" + n, "NEW/" + n)
     finally:
         g.close()
     space = re.search(r"Bytes Remaining On B: *(\d+k)", text)
-    return a, new, space.group(1) if space else "?"
+    return new, space.group(1) if space else "?"
 
 
 def gensys(g, answers):
@@ -440,28 +500,21 @@ base = 0x50
 }
 
 
-def same_files(dsk1, dsk2, names, dest):
-    """Each file must be the same bytes on both disks."""
-    d1, d2 = os.path.join(dest, "1"), os.path.join(dest, "2")
-    os.makedirs(d1)
-    os.makedirs(d2)
-    cpm_get(dsk1, names, d1)
-    cpm_get(dsk2, names, d2)
+def same_files(d1, d2, names, what):
+    """Each file must be the same bytes in both folders."""
     for n in names:
         with open(os.path.join(d1, n), "rb") as f1, open(os.path.join(d2, n), "rb") as f2:
             if f1.read() != f2.read():
-                raise BuildError("%s on %s is not the %s of %s" % (
-                    n, os.path.basename(dsk2), n, os.path.basename(dsk1)))
-    return d1
+                raise BuildError("%s on %s is not the file the build made" % (n, what))
 
 
-def verify_server(work, a, new, xios):
+def verify_server(work, new, xios):
     """Step 3: check the system tracks and MPM.SYS of the new disk, and boot it into
-    MP/M II."""
-    got = same_files(a, new, ["MPMLDR.COM", "MPM.SYS"], os.path.join(work, "srv-check"))
-    cpm_get(a, ["BOOT.HEX"], got)
-    boot = boot_image(os.path.join(got, "BOOT.HEX"))
-    with open(os.path.join(got, "MPMLDR.COM"), "rb") as f:
+    MP/M II. W of step 2 put the files of A: in A/ and those of the new disk in NEW/."""
+    got_a, got_new = os.path.join(work, "A"), os.path.join(work, "NEW")
+    same_files(got_a, got_new, ["MPMLDR.COM", "MPM.SYS"], "the new disk")
+    boot = boot_image(os.path.join(got_a, "BOOT.HEX"))
+    with open(os.path.join(got_a, "MPMLDR.COM"), "rb") as f:
         ldr = f.read()
     tracks = system_sectors(new, 0, 3)
     if any(tracks[i if i < 0x80 else i + 0x80] != b for i, b in boot.items()):
@@ -470,7 +523,7 @@ def verify_server(work, a, new, xios):
         raise BuildError("the system tracks do not hold MPMLDR.COM")
     print("  ok    the system tracks hold BOOT and MPMLDR.COM")
     print("  ok    MPM.SYS (%d bytes) on the new disk is the one GENSYS made"
-          % os.path.getsize(os.path.join(got, "MPM.SYS")))
+          % os.path.getsize(os.path.join(got_new, "MPM.SYS")))
 
     machine = os.path.join(work, "verify.toml")
     with open(machine, "w") as f:
@@ -492,17 +545,22 @@ def verify_server(work, a, new, xios):
 
 def build_requester(work):
     """Step 4: make SNIOS.SPR on REQBUILD.DSK, and copy it and the requester files of
-    CP/NET to A:."""
+    CP/NET to A:. W copies each file of both disks to REQ/A/ and REQ/B/."""
     a = os.path.join(work, "requester.dsk")
     b = os.path.join(work, "reqbuild.dsk")
     shutil.copy(CPM22_DSK, a)
     shutil.copy(REQBUILD_DSK, b)
+    names = REQUESTER_FILES + ["SNIOS.SPR"]
+    got_a, got_b = os.path.join(work, "REQ", "A"), os.path.join(work, "REQ", "B")
+    os.makedirs(got_a)
+    os.makedirs(got_b)
 
     g = Guest(REQBUILD_TOML, os.path.join(work, "3-requester.log"))
     try:
         g.mon("SET CONSOLE UPPER=OFF")
-        g.mon('MOUNT dsk0:drive0 "%s"' % a)
-        g.mon('MOUNT dsk0:drive1 "%s"' % b)
+        g.mon('SET hb0 hostdir="%s"' % work)
+        mount(g, "drive0", a)
+        mount(g, "drive1", b)
         g.run("\r\nA>", start=0xFF00)
         g.run("\r\nB>", "B:\r")
         check_assembly(g.run("\r\nB>", "A:RMAC SNIOS $PZ SZ\r", timeout_ms=600000),
@@ -514,9 +572,12 @@ def build_requester(work):
         g.run("\r\nA>", "A:\r")
         text = g.run("\r\nA>", "STAT A:\r")
         g.run("\r\nA>", "\r")
+        for n in names:
+            w_host(g, "\r\nA>", "A:" + n, "REQ/A/" + n)
+            w_host(g, "\r\nA>", "B:" + n, "REQ/B/" + n)
     finally:
         g.close()
-    same_files(b, a, REQUESTER_FILES + ["SNIOS.SPR"], os.path.join(work, "req-check"))
+    same_files(got_b, got_a, names, "the requester disk")
     print("  ok    the requester disk has SNIOS.SPR and the requester files of CP/NET")
     space = re.search(r"Bytes Remaining On A: *(\d+k)", text)
     return a, space.group(1) if space else "?"
@@ -532,10 +593,8 @@ def main():
     args = ap.parse_args()
     if not SIM or not os.access(SIM, os.X_OK):
         sys.exit("make-cpnet-disks: no altairsim on PATH. Set ALTAIRSIM=/path/to/altairsim.")
-    if not shutil.which("cpmcp"):
-        sys.exit("make-cpnet-disks: no cpmcp on PATH. Install cpmtools.")
-    for f in (SRVBUILD_TOML, REQBUILD_TOML, CPM22_DSK, SRVBUILD_DSK, REQBUILD_DSK, DISK1_DSK):
-        if not os.path.isfile(f):
+    for f in (SRVBUILD_TOML, REQBUILD_TOML, CPM22_DSK, SRVBUILD_DSK, REQBUILD_DSK, DISK1):
+        if not os.path.exists(f):
             sys.exit("make-cpnet-disks: no %s." % f)
 
     work = tempfile.mkdtemp(prefix="cpnet-")
@@ -543,10 +602,11 @@ def main():
     try:
         print("1-2. build MPM.SYS (%s) with the CP/NET server, MPMLDR.COM, BOOT and AFORMAT.COM on"
               % args.xios)
-        print("     SRVBUILD.DSK, copy them to a copy of MPMII_1.DSK, and SYSGEN it (srvbuild.toml)")
-        a, new, space = build_server(work, args.xios)
+        print("     SRVBUILD.DSK, copy them and the commands of MPMII_1/ to a blank disk, and SYSGEN")
+        print("     it (srvbuild.toml)")
+        new, space = build_server(work, args.xios)
         print("3. check the server disk and boot it")
-        verify_server(work, a, new, args.xios)
+        verify_server(work, new, args.xios)
         shutil.copy(new, args.server)
         print("  wrote %s (%s free)" % (args.server, space))
         print("4. build SNIOS.SPR on REQBUILD.DSK, and copy it and the requester files to a")

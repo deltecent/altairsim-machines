@@ -19,7 +19,7 @@ an Altair requester, connected by a serial line on port B of each **88-2SIO**.
 | `CPM22.DSK` | A CP/M 2.2 disk that boots, with the tools for the builds. |
 | `SRVBUILD.DSK` | The sources and the DRI files that the server build needs. |
 | `REQBUILD.DSK` | `SNIOS.ASM`, the requester files of CP/NET, and `LOGIN.ASM` and `LOGOFF.ASM`. |
-| `MPMII_1.DSK` | The files of DRI MP/M II disk 1. A copy of it becomes the new server disk. |
+| `MPMII_1/` | The files of DRI MP/M II disk 1, and the disk as `MPMII_1.IMD`. The server build copies the commands from it. |
 | `RESXIOS.ASM`, `LDRBIOS.ASM`, `BOOT.ASM`, `AFORMAT.ASM` | The XIOS, the loader BIOS, the cold start loader and the disk format program of MP/M II. |
 | `SS1XIOS.ASM` | The XIOS of `server-ss1.toml`. |
 | `make-cpnet-disks.py` | The script that does the steps of "Build the server disk" and "Build the requester disk" in the simulator. It built `server.dsk`, `server-ss1.dsk` and `requester.dsk`. |
@@ -55,6 +55,10 @@ The two machines run in two windows. Start the server first.
 5. Type `LOGIN`.
 6. Type `NETWORK B:=A:[0]`. Drive B: of the requester is now drive A: of the server.
 
+The commands on `server.dsk` are read-only and have the system attribute, as on `MPM2.DSK` of
+the `mpm2` example. `DIR B:` does not show them, but `STAT B:*.*` does. PIP copies a file with
+the system attribute only with the `R` option, as in `[VR]` below.
+
 The requester calls the server one time, when the requester starts. If the server is not
 running, port B stays unconnected. To call again, type this command at the monitor of the
 requester:
@@ -63,7 +67,7 @@ requester:
 CONNECT sio0:b socket:localhost:8830
 ```
 
-These commands ran on 2026-10-21. Each machine ran in its own process:
+These commands ran on 2026-10-26. Each machine ran in its own process:
 
 ```
 A>CPNETLDR
@@ -92,25 +96,29 @@ Disk device status:
   Drive B: = Drive A: on Network Server ID = 00H
 ...
 A>DIR B:
-B: BNKBDOS  SPR : BNKXDOS  SPR : RESBDOS  SPR : TMP      SPR
-...
-B: SCHED    RSP : SPOOL    RSP : MPM      SYS : MPMLDR   COM
+B: MPM      SYS
 A>PIP B:CPNET.TXT=A:IOBYTE.TXT[V]
 <Warm Boot>
-A>PIP A:MPMLDR.CPY=B:MPMLDR.COM[V]
+A>PIP A:MPMLDR.CPY=B:MPMLDR.COM[VR]
 <Warm Boot>
 A>STAT A:MPMLDR.CPY
 
  Recs  Bytes  Ext Acc
    52     8k    1 R/W A:MPMLDR.CPY
+Bytes Remaining On A: 12k
+
+A>W MPMLDR.CPY OUT/MPMLDR.CPY
+W: MPMLDR.CPY -> OUT/MPMLDR.CPY
+52 records, 6656 bytes
+<Warm Boot>
 ```
 
 After that, `TYPE CPNET.TXT` on the server console typed the file that the requester wrote.
-`cpmcp` read `MPMLDR.CPY` off `requester.dsk` on the host. It was the same, byte for byte, as
-`MPMLDR.COM` on `server.dsk`.
+`W` copied `MPMLDR.CPY` to the folder `OUT` on the host. It was the same, byte for byte, as `MPMLDR.COM` on
+`server.dsk`.
 
-The line runs at 9600 baud. In this check, `DIR B:` of 20 files took about 11 s. The copy of
-the 6656-byte `MPMLDR.COM` from the server took about 33 s.
+The line runs at 9600 baud. In this check, `DIR B:` took about 9 s. The copy of the 6656-byte
+`MPMLDR.COM` from the server took about 31 s.
 
 ## The machines
 
@@ -124,7 +132,7 @@ The line is a `socket:` endpoint, because it passes each byte unchanged. Both ma
 processor at 2 MHz, because the timeouts of NETWRKIF and SNIOS are instruction loops. The
 server also has an 88-VI/RTC and RAM to FEFFh. Start one of the two servers, not both.
 
-The server has one console, on 2SIO port A, and one user segment, 0000h–68FFh. `MPMSTAT` on
+The server has one console, on 2SIO port A, and one user segment, 0000h–67FFh. `MPMSTAT` on
 the server shows the two network processes. `NtwrkIP0` waits for port B, and `SERVR0PR` waits
 for a message:
 
@@ -153,18 +161,18 @@ how to set a real board.
   until the next `EI`.
 - At boot, the XIOS reads the clock of the System Support 1 and sets the date and time of
   MP/M II.
-- The XIOS is one page longer. The user segment is 0000h–67FFh.
+- The XIOS is one page longer. The user segment is 0000h–66FFh.
 
 The requester is the same for the two servers. This boot of the server ran through
-`altairsim --mcp` on 2026-10-22:
+`altairsim --mcp` on 2026-10-27:
 
 ```
-BNKXIOS SPR  A300H  1A00H
-MP/M II Sys  6800H  9800H
-Memseg  Usr  0000H  6800H
+BNKXIOS SPR  A200H  1B00H
+MP/M II Sys  6700H  9900H
+Memseg  Usr  0000H  6700H
 ...
 0A>TOD
-Thu 10/22/<6 16:12:44
+Tue 10/27/<6 07:46:36
 ```
 
 `TOD` shows the year 2026 as `<6`. DRI's `TOD` prints two digits for the year, and counts the
@@ -285,29 +293,39 @@ An 88-DCDD cannot read the IBM 3740 disk. `CPNET.DSK` has the 29 files of the DR
 88-DCDD disk. The DRI copies of `SNIOS.ASM` and `NETWRKIF.ASM` are on it, not the Altair
 copies of this folder.
 
-The files of `CPNET.DSK`, `SRVBUILD.DSK` and `REQBUILD.DSK` were copied on the host, with
-cpmtools. To do the same:
+`W` and `R` copied the files of `CPNET.DSK` in CP/M, through the host bridge. `W` on a
+Tarbell machine copied the files of the DRI disk to the host. `R` on the Altair copied them to
+a new 88-DCDD disk. To do the same:
 
-1. Start the Tarbell machine from this folder, with the `MOUNT` command. altairsim converts
-   the `.imd` file to `CPNET80.dsk`, a raw image that a Tarbell controller reads:
-
-   ```
-   cd examples/cpnet
-   altairsim tarbell -x "MOUNT fdc0:drive1 CPNET80.IMD"
-   ```
-
-2. Type `QUIT` at the `altairsim>` prompt.
-3. Copy the files off `CPNET80.dsk`:
+1. Get the [`tarbell` example](https://altairsim.com/downloads/examples/tarbell). Copy
+   `CPNET80.IMD` of this folder to the `tarbell` folder.
+2. In the `tarbell` folder, make a folder with the name `DRI`.
+3. Start the Tarbell machine from the `tarbell` folder:
 
    ```
-   mkdir dri
-   cpmcp -f ibm-3740 CPNET80.dsk '0:*.*' dri/
+   altairsim tarbell.toml
    ```
 
-4. Format a new 88-DCDD disk with `AFORMAT B:` on CP/M. Add 96 zero bytes to the end of the
-   image, as on the other disks of this folder.
-5. Copy the files to the new disk with `cpmcp -f altair`. `SRVBUILD.DSK` is a copy of
-   `BUILD.DSK` of the `mpm2` example with `NETWRKIF.ASM` and `SERVER.RSP` added.
+4. At the `A>` prompt, press `Ctrl-E`. Type `MOUNT fdc0:drive1 CPNET80.IMD`, then type `RUN`.
+   altairsim converts the `.imd` file to `CPNET80.dsk`, a raw image that a Tarbell
+   controller reads.
+5. Type `W B:*.* DRI`. W copies the 29 files to `DRI`. W copies a text file up to its first
+   `Ctrl-Z`.
+6. Press `Ctrl-E` and type `QUIT`.
+7. Copy the `DRI` folder to this folder.
+8. Start the server build machine from this folder, with `altairsim srvbuild.toml`.
+9. At the `A>` prompt, press `Ctrl-E`. Type `MOUNT dsk0:drive1 CPNET.DSK CREATE`, then type
+   `RUN`.
+10. Type `AFORMAT B:`. At `Ready (Y/N)?`, type `Y`. At `Format another (Y/N)?`, type `N`. At
+    `Put CP/M disk in A:`, type `Y`.
+11. Press `Ctrl-C`.
+12. Type `B:`.
+13. Type `A:R DRI/*.*`. R copies the 29 files to `CPNET.DSK`.
+
+`SRVBUILD.DSK` is a copy of `BUILD.DSK` of the `mpm2` example, with `NETWRKIF.ASM` of this
+folder and `SERVER.RSP` added. `REQBUILD.DSK` holds `SNIOS.ASM` of this folder and the
+requester files of the DRI disk. `R` copied them in the same way. On a real Altair, `PCGET`
+copies each file from a host computer through a serial port.
 
 ## Build the server disk
 
@@ -317,9 +335,13 @@ Altair with two 88-DCDD drives and 56K of RAM, and these three disks:
 
 | Disk | What is on it |
 |---|---|
-| `CPM22.DSK` | The 56K CP/M 2.2b v2.3 of Mike Douglas for the 88-DCDD, from altairsim 1.3.4. It has PIP, ED, ASM, DDT, LOAD, STAT, SYSGEN and the other CP/M tools. It also has `AFORMAT.COM` 1.12, and `RMAC.COM` and `LINK.COM` from DRI MP/M II disk 2. The games, `LS.COM`, and the host-bridge programs `R`, `W` and `HDIR` are removed. |
+| `CPM22.DSK` | The 56K CP/M 2.2b v2.3 of Mike Douglas for the 88-DCDD, from altairsim 1.3.4. It has PIP, ED, ASM, DDT, LOAD, STAT, SYSGEN and the other CP/M tools. It also has `AFORMAT.COM` 1.12, and `RMAC.COM` and `LINK.COM` from DRI MP/M II disk 2. It has the XMODEM programs `PCGET` and `PCPUT`, and the host-bridge programs `R`, `W` and `HDIR`. The games and `LS.COM` are removed. |
 | `SRVBUILD.DSK` | `RESXIOS.ASM`, `SS1XIOS.ASM`, `LDRBIOS.ASM`, `BOOT.ASM`, `AFORMAT.ASM` and `NETWRKIF.ASM`. From DRI MP/M II disk 1: `GENSYS.COM`, `MPMLDR.COM`, and the `.SPR`, `.RSP` and `.BRS` files. `SERVER.RSP` from the CP/NET disk. |
-| A copy of `MPMII_1.DSK` | The new server disk. It has every file of DRI disk 1, and its system tracks are empty. |
+| A blank disk | The new server disk. AFORMAT formats it. |
+
+The build also copies the commands of DRI disk 1 to the new disk. They are the 32 `.PRL` and
+`.COM` files in the `MPMII_1` folder. In the simulator, `R` copies them from the host. On a real
+Altair, `PCGET` copies them from a host computer through a serial port.
 
 The build writes on all three disks. Use copies of them. On a real Altair, write each image to
 a disk. In the simulator, copy this folder and start the server build machine:
@@ -327,17 +349,17 @@ a disk. In the simulator, copy this folder and start the server build machine:
 ```
 cp -R examples/cpnet ~/cpnet-server
 cd ~/cpnet-server
-cp MPMII_1.DSK NEW.DSK
 altairsim srvbuild.toml
 ```
 
-CP/M boots from `CPM22.DSK` in A:, with `SRVBUILD.DSK` in B:.
+CP/M boots from `CPM22.DSK` in A:, with `SRVBUILD.DSK` in B:. `R` and `W` see the folder that
+you start `altairsim` from, here `~/cpnet-server`.
 
 ### Assemble the XIOS, the network interface and the loaders
 
 The tools are on A:, and the files that they make go to B:. `$PZ SZ` for RMAC and `.BBZ` for
 ASM make no listing, so that every file fits on `SRVBUILD.DSK`. At the end of the build,
-`SRVBUILD.DSK` has 8K free, and 2K free for the System Support 1 server.
+`SRVBUILD.DSK` has 10K free, and 6K free for the System Support 1 server.
 
 1. Type `B:`.
 2. Type `A:RMAC RESXIOS $PZ SZ`. RMAC makes `RESXIOS.REL`.
@@ -391,22 +413,24 @@ Steps 10 to 13 are section 1.2 of the guide.
 | `SPOOL   RSP (N) ?` | `N` |
 | `SERVER  RSP (N) ?` | `Y` |
 | `NETWRKIFRSP (N) ?` | `Y` |
-| `Base,size,attrib (69,97,80) ?` | Press `RETURN` |
-| `Base,size,attrib (00,C0,00) ?` | `00,69,00` |
+| `Base,size,attrib (68,98,80) ?` | Press `RETURN` |
+| `Base,size,attrib (00,C0,00) ?` | `00,68,00` |
 | `Accept new memory segment table entries (Y) ?` | `Y` |
 
 The top page is FE, because the DBL PROM is at FF00h. The server has one TMP, because 2SIO
 port B is the network line. MP/M II takes RST 6 for its debugger, because RST 5 is the tick of
 the 88-VI/RTC. The machine has no printer, so SPOOL is not added.
 
-The two network RSPs make the operating system larger, so it starts at 6900h. Before the
-segment table, GENSYS prints the memory map. `CONSOLE DAT  6900H` is its lowest line. The one
-user segment takes all the memory below 6900h, 69h pages.
+The two network RSPs make the operating system larger, so it starts at 6800h. Before the
+segment table, GENSYS prints the memory map. `CONSOLE DAT  6800H` is its lowest line. The one
+user segment takes all the memory below 6800h, 68h pages.
 
 ### Make AFORMAT.COM
 
-1. Type `A:ASM AFORMAT.BBZ`. ASM makes `AFORMAT.HEX`.
-2. Type `A:LOAD AFORMAT`. LOAD makes `AFORMAT.COM`.
+1. Type `ERA RESXIOS.SPR`. GENSYS has put the XIOS in `MPM.SYS`, and B: needs the space
+   for `AFORMAT.COM`.
+2. Type `A:ASM AFORMAT.BBZ`. ASM makes `AFORMAT.HEX`.
+3. Type `A:LOAD AFORMAT`. LOAD makes `AFORMAT.COM`.
 
 ### Copy the new files to A:
 
@@ -420,15 +444,40 @@ B: gets a different disk next, so the new files go to A: first.
 
 ### Make the new server disk
 
-1. Put the copy of `MPMII_1.DSK` in B:. In the simulator, press `Ctrl-E`, type
-   `MOUNT dsk0:drive1 NEW.DSK`, and type `RUN`.
-2. Press `Ctrl-C`. CP/M reads the directory of the new disk. Without `Ctrl-C`, CP/M does not
+`MPM.SYS` goes on the blank disk first. It then takes the first blocks after the directory,
+on tracks 3 to 11. At boot, `MPMLDR` reads the directory on track 2 and then `MPM.SYS`, so
+the head stays on tracks 2 to 11.
+
+1. Put the blank disk in B:. In the simulator, press `Ctrl-E`, type
+   `MOUNT dsk0:drive1 NEW.DSK CREATE`, and type `RUN`. `CREATE` makes an empty disk image.
+2. Type `AFORMAT B:`.
+3. At `Ready (Y/N)?`, type `Y`. AFORMAT formats the disk.
+4. At `Format another (Y/N)?`, type `N`.
+5. At `Put CP/M disk in A:`, type `Y`.
+6. Press `Ctrl-C`. CP/M reads the directory of the new disk. Without `Ctrl-C`, CP/M does not
    write on the new disk.
-3. Type `PIP B:=MPM.SYS[V]`.
-4. Type `PIP B:=MPMLDR.COM[V]`. The new `MPMLDR.COM` replaces the one of DRI.
-5. Type `PIP B:=AFORMAT.COM[V]`.
-6. Type `STAT B:*.PRL $SYS`. Each `.PRL` file gets the system attribute, so every user number
-   can run it.
+7. Type `PIP B:=MPM.SYS[V]`.
+8. Type `B:`. `R` and `PCGET` write to the current drive.
+9. Copy the commands of DRI disk 1 to B:. In the simulator, type these commands:
+
+   ```
+   A:R MPMII_1/*.PRL
+   A:R MPMII_1/*.COM
+   ```
+
+   Do not type `A:R MPMII_1/*.*`, because that also copies `MPMII_1.IMD` and the files for
+   GENSYS. On a real Altair, copy each `.PRL` and `.COM` file with `A:PCGET`.
+10. Type `A:`.
+11. Type `PIP B:=MPMLDR.COM[V]`. The new `MPMLDR.COM` replaces the one of DRI.
+12. Type `PIP B:=AFORMAT.COM[V]`.
+13. Type `STAT B:*.PRL $R/O`.
+14. Type `STAT B:*.PRL $SYS`.
+15. Type `STAT B:*.COM $R/O`.
+16. Type `STAT B:*.COM $SYS`.
+
+Each command on B: is now read-only and has the system attribute, so every user number can run
+it. Section 7.6 of the *MP/M II User's Guide* gives this setting. CP/M STAT sets one attribute
+at a time.
 
 ### Write the system tracks
 
@@ -468,7 +517,7 @@ The steps are the same, with these changes:
 2. Type `A:RMAC SS1XIOS $PZ SZ`, not `A:RMAC RESXIOS $PZ SZ`.
 3. Type `A:LINK RESXIOS=SS1XIOS[OS]`, not `A:LINK RESXIOS[OS]`. GENSYS reads the XIOS from
    `RESXIOS.SPR`.
-4. In GENSYS, give `00,68,00` for the user segment.
+4. In GENSYS, give `00,67,00` for the user segment.
 
 ### Boot the new server disk
 
@@ -530,9 +579,10 @@ prints after each command. It checks the system tracks and `MPM.SYS` of the new 
 and boots the disk into MP/M II. It also checks that each requester file on the new requester
 disk is the same as the one on `REQBUILD.DSK`.
 
-The script needs Python 3, the `altairsim` on your PATH, and cpmtools with the `altair` disk
-format. The build of 2026-10-21 used altairsim 1.3.4. Run the script from this folder, with the
-names of the two new disks:
+The script needs Python 3 and the `altairsim` on your PATH. Every disk step runs in CP/M.
+AFORMAT makes the blank server disk, and `R` copies the commands of DRI disk 1. `W` copies the
+files for the checks to the host. The build of 2026-10-26 used altairsim 1.3.5. Run the script
+from this folder, with the names of the two new disks:
 
 ```sh
 ./make-cpnet-disks.py server.dsk requester.dsk
@@ -548,19 +598,22 @@ A build from the same disks gives the same bytes:
 
 | Disk | SHA-256 |
 |---|---|
-| `server.dsk` | `d7dc7e98…eb8046b6` |
-| `server-ss1.dsk` | `2dbc6bf4…2057432b` |
-| `requester.dsk` | `ae687ec1…6c2de42d` |
+| `server.dsk` | `48070801…3e691c12` |
+| `server-ss1.dsk` | `55733f03…227f6d19` |
+| `requester.dsk` | `d4f79db5…f206eed1` |
 
 The builds use the sources on `SRVBUILD.DSK` and `REQBUILD.DSK`, not the `.ASM` files of this
 folder. The `.ASM` files of this folder are copies of them. The MP/M II files of this folder
-are copies of the ones of the `mpm2` example. After you change `NETWRKIF.ASM`, put the new file on `SRVBUILD.DSK`. `cpmcp` does
-not write over a file, so remove the old file first:
+are copies of the ones of the `mpm2` example. After you change `NETWRKIF.ASM`, put the new
+file on `SRVBUILD.DSK`:
 
-```sh
-cpmrm -f altair SRVBUILD.DSK 0:netwrkif.asm
-cpmcp -f altair SRVBUILD.DSK NETWRKIF.ASM 0:
-```
+1. In this folder, type `altairsim srvbuild.toml`. The machine mounts `CPM22.DSK` and
+   `SRVBUILD.DSK` of this folder.
+2. Type `B:`.
+3. Type `A:R NETWRKIF.ASM`. `R` replaces the old file.
+4. Press `Ctrl-E` and type `QUIT`.
+
+For `SNIOS.ASM`, do the same with `altairsim reqbuild.toml` and `A:R SNIOS.ASM`.
 
 ## Read more
 
