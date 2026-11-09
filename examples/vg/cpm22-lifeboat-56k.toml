@@ -1,0 +1,54 @@
+# Lifeboat CP/M 2.2 on a 56K Vector Graphic MZ, with CPM22-LIFEBOAT-VGMZ-56K.DSK in drive 0.
+# It starts from the built-in vgmz machine and changes what a 56K MZ does differently: 56K of
+# RAM, Monitor 4.0c at E000, the controller at F800 and a Bitstreamer II console.
+#
+#     altairsim cpm22-lifeboat-56k.toml
+#     Mon>                       <- the Monitor 4.0c prompt; press B to boot drive 0
+
+[machine]
+name    = "cpm22-lifeboat-56k"
+base    = "vgmz"
+startup = ["RUN E000"]        # the stand-in below has no jump on reset
+
+# Monitor 4.0c ends a message with bit 7 set on its last letter.
+[console]
+strip7out = true
+
+# The console: Bitstreamer II port A, data at 02 and status at 03. Replaces the vgmz console.
+[[board]]
+type = "vgbsii"
+id   = "bs0"
+port = 02
+
+  [board.unit.a]
+  connect = "console"
+
+# The controller moves to F800, Vector's address for a 56K machine.
+[[board]]
+id   = "mdc0"
+base = F800
+
+  [[board.drive]]
+  unit  = 0
+  mount = "CPM22-LIFEBOAT-VGMZ-56K.DSK"
+
+# 56K of RAM, and a stand-in for the PROM/RAM board: Monitor 4.0c at E000, 1K of RAM at FC00.
+[[board]]
+type = "memory"
+id   = "mem0"
+fill = "random"
+
+  [[board.region]]
+  type = "ram"
+  at   = 0000
+  size = "56K"
+
+  [[board.region]]
+  type  = "rom"
+  at    = E000
+  mount = "builtin:vgmon40c"
+
+  [[board.region]]
+  type = "ram"
+  at   = FC00
+  size = "1K"

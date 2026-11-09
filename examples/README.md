@@ -27,6 +27,7 @@ New machines:
 - [`mpm2/`](mpm2/): **MP/M II 2.1** with two consoles.
 - [`cpnet/`](cpnet/): **CP/NET 1.2** on two Altairs, an MP/M II server and a CP/M 2.2 requester.
 - [`ps2int/`](ps2int/): **MITS Programming System II** from cassette, with the source for its bootstrap loader.
+- [`vg/`](vg/): **CP/M** and **Micropolis MDOS** on **Vector Graphic** machines with Micropolis floppies.
 
 Changes:
 
@@ -48,6 +49,7 @@ Changes:
 | [`mpm2/`](mpm2/) | **MP/M II 2.1**, the multi-user system of Digital Research, on an Altair with **88-DCDD** 8″ floppies, an **88-2SIO** with two consoles and an **88-VI/RTC** for the tick (`mpm2.toml`), or a CompuPro **System Support 1** for the tick and the date (`mpm2-ss1.toml`). The disk boots into MP/M II with no CP/M. `0A>` on console 0, `1A>` on console 1 through `telnet localhost 8820`. |
 | [`sdsys/`](sdsys/) | **SDOS 1.8B** and **SD Systems CP/M 2.2** on an **SD Systems SBC-200** Z80 single-board computer with a **VersaFloppy II** (`sdos.toml`, `cpm.toml`), the monitor alone (`sbc200.toml`), and a **VDB-8024** video console (`sbc200v.toml`, `sdosv.toml`). Press Enter, then `C`. `[A]` for SDOS, `A>` for CP/M. |
 | [`tarbell/`](tarbell/) | **CP/M 2.2** that boots itself off a **Tarbell** floppy controller and its own 32-byte boot PROM: single density (`tarbell.toml`, `tarbell` #1011) and double density, with and without DMA (`tarbelldd.toml`, `tarbelldd-dma.toml`). |
+| [`vg/`](vg/) | **CP/M 1.4**, **CP/M 2.2** and **Micropolis MDOS 3.0 and 4.0** on **Vector Graphic** machines with the **Micropolis Disk Controller** and 5.25″ floppies: a Vector Graphic MZ with a serial console (`cpm14-lifeboat.toml`, `cpm22-lifeboat-56k.toml`, `mdos30.toml`, `mdos40.toml`) and a Vector 3 VIP with a **Flashwriter II** video console (`cpm22-56k.toml`, `mdos40-56k.toml`). Press `B` at the Monitor prompt. `A>` for CP/M, `>` for MDOS. |
 
 ## Tape, storage and I/O boards
 

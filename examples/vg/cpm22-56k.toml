@@ -1,0 +1,15 @@
+# Vector Graphic CP/M 2.20A on the built-in vg3vip machine, with CPM22-VGVIP-56K.DSK in drive 0.
+#
+#     altairsim cpm22-56k.toml
+#     Mon>                       <- the Monitor 4.1 prompt, on the video screen; press B to boot
+
+[machine]
+name    = "cpm22-56k"
+base    = "vg3vip"
+
+[[board]]
+id = "mdc0"
+
+  [[board.drive]]
+  unit  = 0
+  mount = "CPM22-VGVIP-56K.DSK"

@@ -1,0 +1,15 @@
+# Micropolis MDOS 4.0 on the built-in vgmz machine, with MDOS40-VGMZ-48K.DSK in drive 0.
+#
+#     altairsim mdos40.toml
+#     *                          <- the Monitor 2.0C prompt; press B to boot drive 0
+
+[machine]
+name    = "mdos40"
+base    = "vgmz"
+
+[[board]]
+id = "mdc0"
+
+  [[board.drive]]
+  unit  = 0
+  mount = "MDOS40-VGMZ-48K.DSK"
