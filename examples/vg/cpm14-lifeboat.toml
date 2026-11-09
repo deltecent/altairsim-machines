@@ -1,0 +1,15 @@
+# Lifeboat CP/M 1.4 on the built-in vgmz machine, with CPM14-LIFEBOAT-VGMZ-46K.DSK in drive 0.
+#
+#     altairsim cpm14-lifeboat.toml
+#     *                          <- the Monitor 2.0C prompt; press B to boot drive 0
+
+[machine]
+name    = "cpm14-lifeboat"
+base    = "vgmz"
+
+[[board]]
+id = "mdc0"
+
+  [[board.drive]]
+  unit  = 0
+  mount = "CPM14-LIFEBOAT-VGMZ-46K.DSK"

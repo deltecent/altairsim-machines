@@ -1,0 +1,15 @@
+# Micropolis MDOS 4.0 on the built-in vg3vip machine, with MDOS40-VGVIP-56K.DSK in drive 0.
+#
+#     altairsim mdos40-56k.toml
+#     Mon>                       <- the Monitor 4.1 prompt, on the video screen; press B to boot
+
+[machine]
+name    = "mdos40-56k"
+base    = "vg3vip"
+
+[[board]]
+id = "mdc0"
+
+  [[board.drive]]
+  unit  = 0
+  mount = "MDOS40-VGVIP-56K.DSK"
