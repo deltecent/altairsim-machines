@@ -17,23 +17,16 @@ altairsim mitstapes.toml
 
 These machines need the [altairsim](https://github.com/deltecent/altairsim) simulator.
 
-## What's new in 1.3.5
+## What's new in 1.3.6
 
 New machines:
 
-- [`fujinet/`](fujinet/): CP/M 2.2b with a **FujiNet** WiFi adapter. The example builds the FujiNet tools from source and carries them to your own disk.
-- [`d7a/`](d7a/): **MUSIC3** on a **Cromemco D+7A**, and a CP/M machine that builds it from source.
-- [`pb1/`](pb1/): burn a 2708 or 2716 EPROM with an **SSM PB1** board.
-- [`mpm2/`](mpm2/): **MP/M II 2.1** with two consoles.
-- [`cpnet/`](cpnet/): **CP/NET 1.2** on two Altairs, an MP/M II server and a CP/M 2.2 requester.
-- [`ps2int/`](ps2int/): **MITS Programming System II** from cassette, with the source for its bootstrap loader.
 - [`vg/`](vg/): **CP/M** and **Micropolis MDOS** on **Vector Graphic** machines with Micropolis floppies.
 
 Changes:
 
-- `tarbell/`: new CP/M 2.2 disk images.
-- New versions of the host bridge utilities `W.COM`, `R.COM` and `HDIR.COM` on the 14 disk images that have them. `cdos.toml` now has the host bridge board.
-- Each directory now has Markdown summaries of the board and operating system manuals.
+- `mpm2/`: a Markdown summary of the *MP/M II Operating System User's Guide*. The MP/M II disks now hold MP/M II and its commands, ready to run. The disk build scripts and the README steps make the disks in CP/M, with no cpmtools.
+- `mpm2/` and `cpnet/`: the XIOS unloads the 88-DCDD head 2 seconds after the last read or write, writes a sector without reading its track first, and has write verify off.
 
 ## Disk systems
 
