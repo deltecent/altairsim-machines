@@ -7,6 +7,9 @@ description: Merge a pull request in this repository, then delete the local and 
 
 Merge only when the user asks. The `open-pr` skill stops before this step.
 
+If the user also asks for a tag or a release ("merge and tag as 1.3.6"), merge here, then follow
+the `release` skill. The tag goes on after the "What's new" section for that version is merged.
+
 ## Rules
 
 - The default branch is `master`. Never `main`.
